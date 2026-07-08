@@ -391,11 +391,16 @@ button { font-family: inherit; touch-action: manipulation; }
 }
 .st-row:last-child { border-bottom: none; }
 .st-row.st-hd { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.st-c0 { color: var(--muted); font-variant-numeric: tabular-nums; text-align: left; font-size: 14px; }
+.st-c0 { color: var(--muted); font-variant-numeric: tabular-nums; text-align: left; font-size: 14px; opacity: 0.5; }
+.st-c0.done { color: var(--accent-2); opacity: 1; font-weight: 700; }
 .st-val { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent-2); letter-spacing: -0.01em; }
+/* Оценочная 25-ка (посчитана как половина +50) — приглушённая, чтобы отличать от точной. */
+.st-est { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
 .st-dash { color: var(--muted); opacity: 0.5; }
 .st-blank { color: transparent; }
 .st-row.st-todo { opacity: 0.4; }
+/* Последний введённый отрезок — рамкой. */
+.st-row.st-last { box-shadow: inset 0 0 0 1.5px var(--accent-2); border-radius: 8px; background: rgba(95, 227, 207, 0.07); }
 
 /* --- Метрики плотности --- */
 .density-row { display: flex; gap: 10px; margin-top: 14px; }

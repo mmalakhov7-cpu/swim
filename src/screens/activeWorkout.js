@@ -386,8 +386,6 @@ export function renderActiveWorkout(root, ctx) {
     // (50 — через строку, 100 — через три). Перерисовываем при изменении (кэш sdSig).
     function renderSplitTable(v) {
       const markers = v.markers;
-      const map = new Map();
-      for (const mk of markers) map.set(mk.d, mk.t);
       const done = markers[markers.length - 1].d;
       const target = v.target || 0;
       const sig = v.index + ":" + v.status + ":" + markers.map((m) => m.d + "@" + m.t).join(",") + ":" + target;
@@ -410,14 +408,21 @@ export function renderActiveWorkout(root, ctx) {
         return;
       }
 
-      // Ячейка: время отрезка длины N, заканчивающегося в точке d.
-      const cell = (N, d) => {
-        if (d % N !== 0) return h("span.st-blank", ""); // граница не кратна N — пусто
-        if (map.has(d) && map.has(d - N)) {
-          return h("span.st-val", formatSplit(map.get(d) - map.get(d - N), { tenths }));
-        }
-        return h("span.st-dash", "—"); // нет точной границы или ещё не проплыто
-      };
+      // Раскладываем на 25-метровые «квадраты». +50 делим пополам (среднее),
+      // +25 — точное время. q[i] — время i-го квадрата; est[i] — оценка это или точ.
+      const q = [], est = [];
+      for (let i = 1; i < markers.length; i++) {
+        const seg = markers[i].t - markers[i - 1].t;
+        const laps = Math.max(1, Math.round((markers[i].d - markers[i - 1].d) / 25));
+        for (let k = 0; k < laps; k++) { q.push(seg / laps); est.push(laps > 1); }
+      }
+      const doneLaps = q.length;
+      // Последний введённый отрезок (его квадраты подсвечиваем рамкой).
+      const lastLen = markers.length > 1 ? markers[markers.length - 1].d - markers[markers.length - 2].d : 0;
+      const lastLaps = Math.max(1, Math.round(lastLen / 25));
+      const lastFrom = doneLaps - lastLaps + 1;
+      // Сумма квадратов [a..b] (1-based), либо null если не все проплыты.
+      const sum = (a, b) => { let s = 0; for (let i = a; i <= b; i++) { if (i > doneLaps) return null; s += q[i - 1]; } return s; };
 
       const grid = h("div.st-grid");
       grid.append(
@@ -425,13 +430,23 @@ export function renderActiveWorkout(root, ctx) {
           h("span.st-c0", "#"), h("span", "25 м"), h("span", "50 м"), h("span", "100 м")),
       );
       for (let i = 1; i <= nRows; i++) {
-        const d = i * 25;
-        const todo = d > done;
+        const swum = i <= doneLaps;
+        // 25 м
+        const c25 = swum
+          ? h(`span.${est[i - 1] ? "st-est" : "st-val"}`, formatSplit(q[i - 1], { tenths }))
+          : h("span.st-dash", "—");
+        // 50 м — на чётных строках (сумма пары)
+        let c50 = h("span.st-blank", "");
+        if (i % 2 === 0) { const s = sum(i - 1, i); c50 = s != null ? h("span.st-val", formatSplit(s, { tenths })) : h("span.st-dash", "—"); }
+        // 100 м — каждая 4-я строка (сумма четырёх)
+        let c100 = h("span.st-blank", "");
+        if (i % 4 === 0) { const s = sum(i - 3, i); c100 = s != null ? h("span.st-val", formatSplit(s, { tenths })) : h("span.st-dash", "—"); }
+
+        const isLast = swum && i >= lastFrom && i <= doneLaps;
         grid.append(
-          h(`div.st-row${todo ? ".st-todo" : ""}`,
-            h("span.st-c0", `${i}`),
-            cell(25, d), cell(50, d), cell(100, d),
-          )
+          h(`div.st-row${swum ? "" : ".st-todo"}${isLast ? ".st-last" : ""}`,
+            h(`span.st-c0${swum ? ".done" : ""}`, `${i}`),
+            c25, c50, c100),
         );
       }
       el.splitTable.append(grid);
