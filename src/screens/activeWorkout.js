@@ -417,10 +417,6 @@ export function renderActiveWorkout(root, ctx) {
         for (let k = 0; k < laps; k++) { q.push(seg / laps); est.push(laps > 1); }
       }
       const doneLaps = q.length;
-      // Последний введённый отрезок (его квадраты подсвечиваем рамкой).
-      const lastLen = markers.length > 1 ? markers[markers.length - 1].d - markers[markers.length - 2].d : 0;
-      const lastLaps = Math.max(1, Math.round(lastLen / 25));
-      const lastFrom = doneLaps - lastLaps + 1;
       // Сумма квадратов [a..b] (1-based), либо null если не все проплыты.
       const sum = (a, b) => { let s = 0; for (let i = a; i <= b; i++) { if (i > doneLaps) return null; s += q[i - 1]; } return s; };
 
@@ -442,7 +438,8 @@ export function renderActiveWorkout(root, ctx) {
         let c100 = h("span.st-blank", "");
         if (i % 4 === 0) { const s = sum(i - 3, i); c100 = s != null ? h("span.st-val", formatSplit(s, { tenths })) : h("span.st-dash", "—"); }
 
-        const isLast = swum && i >= lastFrom && i <= doneLaps;
+        // Рамка на крайней (последней проплытой) строке.
+        const isLast = swum && i === doneLaps;
         grid.append(
           h(`div.st-row${swum ? "" : ".st-todo"}${isLast ? ".st-last" : ""}`,
             h(`span.st-c0${swum ? ".done" : ""}`, `${i}`),
