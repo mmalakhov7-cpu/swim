@@ -24,7 +24,9 @@
   --shadow-primary: 0 8px 26px rgba(88, 199, 230, 0.22);
 }
 
-* { box-sizing: border-box; }
+/* touch-action НЕ наследуется — ставим на все элементы, иначе двойной тап по
+   карточкам/фону/промежуткам зумит. Свайп карточки задания переопределён (pan-y). */
+* { box-sizing: border-box; touch-action: manipulation; }
 
 html, body {
   margin: 0;
