@@ -319,6 +319,25 @@ button { font-family: inherit; touch-action: manipulation; }
 .swipe-hint.off { opacity: 0.12; }
 .pager-count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 
+/* Просмотр соседнего задания (не активного) */
+.task-head-left { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; flex-wrap: wrap; }
+.task-status { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.task-status.done { color: var(--green); background: rgba(99, 214, 164, 0.14); }
+.task-status.upcoming { color: var(--muted); background: var(--bg-2); }
+.to-current {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(88, 199, 230, 0.14);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.to-current:active { background: rgba(88, 199, 230, 0.22); }
+
 .timers-top { display: flex; gap: 10px; margin-top: 12px; }
 .timer {
   flex: 1;

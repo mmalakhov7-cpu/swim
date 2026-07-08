@@ -12,8 +12,12 @@
 Открыть адрес, который выведется в консоли. Для чистого старта (без старого service
 worker) удобно менять порт — новый порт = новый origin без кэша и SW.
 """
+import os
 import sys
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+# Всегда отдаём из папки, где лежит serve.py (а не из текущего cwd).
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8145
 

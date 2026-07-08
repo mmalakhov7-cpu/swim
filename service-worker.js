@@ -6,7 +6,7 @@
 //   • офлайн — отдаём последнюю закэшированную версию.
 // Так офлайн-работа сохраняется, но обновления не «залипают» в кэше.
 
-const CACHE = "swim-v18";
+const CACHE = "swim-v21";
 
 const ASSETS = [
   "./",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./vendor/chart.min.js",
   "./src/app.js",
   "./src/storage.js",
+  "./src/sync.js",
   "./src/models.js",
   "./src/timer.js",
   "./src/splits.js",

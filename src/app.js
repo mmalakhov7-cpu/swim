@@ -1,6 +1,7 @@
 // app.js — точка входа и роутинг экранов (hash-based, без зависимостей).
 
 import { getSettings } from "./storage.js";
+import * as sync from "./sync.js";
 import { renderDashboard } from "./screens/dashboard.js";
 import { renderPrepare } from "./screens/prepare.js";
 import { renderActiveWorkout } from "./screens/activeWorkout.js";
@@ -78,6 +79,13 @@ window.addEventListener("hashchange", route);
 window.addEventListener("DOMContentLoaded", route);
 // На случай, если DOMContentLoaded уже прошёл к моменту загрузки модуля.
 if (document.readyState !== "loading") route();
+
+// Синхронизация с Google Sheets. После подтягивания данных — обновляем настройки
+// и перерисовываем текущий экран (но не во время активной тренировки).
+sync.init(() => {
+  appState.refreshSettings();
+  if (!location.hash.startsWith("#/active")) route();
+});
 
 // Регистрация service worker (офлайн). Не критично для работы.
 if ("serviceWorker" in navigator) {

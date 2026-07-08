@@ -106,6 +106,7 @@ export function renderActiveWorkout(root, ctx) {
     const workoutTimer = timer("Тренировка", "big");
     const taskTimer = timer("Задание", "big");
     let sdSig = ""; // сигнатура последней отрисовки таблицы разбивки (кэш)
+    let viewIndex = 0; // какое задание СМОТРИМ (не обязательно активное)
 
     el.totalRemain = h("div.metric-val");
     el.totalSub = h("div.metric-sub");
@@ -119,13 +120,16 @@ export function renderActiveWorkout(root, ctx) {
       h("div.density-chip", el.vDens, h("div.density-label", "Плотность")),
     );
     el.taskName = h("div.task-name");
+    el.taskStatus = h("span.task-status");
     el.descBtn = h("button.desc-btn", {
       onclick: toggleDesc, html: INFO_SVG,
       title: "Описание задания", "aria-label": "Описание задания",
     });
     el.descBox = h("div.desc-box hidden");
+    el.taskMetricLabel = h("div.metric-label", "Осталось по заданию");
     el.taskRemain = h("div.metric-val");
     el.taskSub = h("div.metric-sub");
+    el.toCurrentBtn = h("button.to-current hidden", { onclick: goCurrent }, "● К текущему заданию");
     el.undoBtn = h("button.undo-tap", {
       onclick: onUndo, html: UNDO_SVG,
       title: "Отменить последний сплит", "aria-label": "Отменить последний сплит",
@@ -152,15 +156,18 @@ export function renderActiveWorkout(root, ctx) {
       (el.taskCard = h("section.card.task.swipeable",
         h("div.task-viewport",
           (el.taskSlide = h("div.task-slide",
-            h("div.task-head-row", el.taskName, el.descBtn),
+            h("div.task-head-row",
+              h("div.task-head-left", el.taskName, el.taskStatus),
+              el.descBtn),
             el.descBox,
             h("div.hero-row",
               h("div.hero-metric",
-                h("div.metric-label", "Осталось по заданию"),
+                el.taskMetricLabel,
                 el.taskRemain, el.taskSub),
               taskTimer,
             ),
             h("div.task-pager", el.swipeL, el.pagerCount, el.swipeR),
+            el.toCurrentBtn,
           )),
         ),
       )),
@@ -190,14 +197,13 @@ export function renderActiveWorkout(root, ctx) {
     if (settings.keepAwake) wake.enable();
 
     function tick() {
-      const s = workout.snapshot(Date.now());
+      const now = Date.now();
+      const s = workout.snapshot(now);          // АКТИВНАЯ тренировка (живая)
+      const v = workout.viewData(viewIndex, now); // ПРОСМАТРИВАЕМОЕ задание
+      const browsing = viewIndex !== workout.currentIndex;
 
+      // Верхняя карточка — всегда по активной тренировке (идёт своим чередом).
       setText(vWorkout, formatDuration(s.elapsedWorkout, { tenths }));
-      setText(vTask, formatDuration(s.elapsedTask, { tenths }));
-
-      // Постоянная таблица разбивки задания на отрезки (проплытые + остаток).
-      renderSplitTable(s);
-
       if (s.totalTarget) {
         setText(el.totalRemain, fmtDistPools(s.remainingTotal, workout.poolLength));
         setText(el.totalSub, `из ${fmtMeters(s.totalTarget)} м`);
@@ -207,55 +213,68 @@ export function renderActiveWorkout(root, ctx) {
         setText(el.totalSub, "свободное плавание");
         el.progBar.style.width = "0%";
       }
+      setText(el.vLoad, formatDuration(s.loadTotal, { tenths: false }));
+      setText(el.vRest, formatDuration(s.restTotal, { tenths: false }));
+      setText(el.vDens, `${Math.round(s.density * 100)}%`);
+      setText(el.pauseBtn, s.paused ? "▶ Продолжить" : "⏸ Пауза");
+      el.pauseBtn.classList.toggle("resumed", s.paused);
+      screen.classList.toggle("paused", s.paused);
 
-      setText(el.taskName, s.taskName);
-      setText(el.pagerCount, `${s.taskIndex + 1} / ${s.taskCount}`);
+      // ===== Карточка задания и таблица — по ПРОСМАТРИВАЕМОМУ заданию =====
+      setText(vTask, formatDuration(v.taskTimeMs, { tenths }));
+      renderSplitTable(v);
+      setText(el.taskName, v.name);
+      setText(el.pagerCount, `${v.index + 1} / ${v.count}`);
 
-      // Описание задания: кнопка видна только если описание есть.
-      const note = (s.taskNote || "").trim();
+      // Статус-бейдж и метка остатка.
+      setText(el.taskStatus, v.status === "done" ? "✓ выполнено" : v.status === "upcoming" ? "предстоит" : "");
+      el.taskStatus.className = "task-status" + (browsing ? " " + v.status : "");
+      if (v.status === "done") {
+        setText(el.taskMetricLabel, "Проплыто в задании");
+        setText(el.taskRemain, v.target ? fmtDistPools(v.done, workout.poolLength) : `${fmtMeters(v.done)} м`);
+        setText(el.taskSub, v.target ? `цель ${fmtMeters(v.target)} м` : "без цели");
+      } else if (v.status === "upcoming") {
+        setText(el.taskMetricLabel, "Цель задания");
+        setText(el.taskRemain, v.target ? fmtDistPools(v.target, workout.poolLength) : "свободно");
+        setText(el.taskSub, v.target ? `${fmtMeters(v.target)} м · предстоит` : "без фиксированной цели");
+      } else {
+        setText(el.taskMetricLabel, "Осталось по заданию");
+        if (v.target) {
+          setText(el.taskRemain, fmtDistPools(v.remaining, workout.poolLength));
+          setText(el.taskSub, `цель ${fmtMeters(v.target)} м`);
+        } else {
+          setText(el.taskRemain, `${fmtMeters(v.done)} м`);
+          setText(el.taskSub, "без фиксированной цели");
+        }
+      }
+
+      // Описание — по просматриваемому заданию.
+      const note = (v.note || "").trim();
       if (note) {
         el.descBtn.style.display = "";
         setText(el.descBox, note);
-        if (el.descBox._forTask !== s.taskIndex) {
-          // Новое задание — сворачиваем описание по умолчанию.
+        if (el.descBox._forTask !== v.index) {
           el.descBox.classList.add("hidden");
           el.descBtn.classList.remove("open");
-          el.descBox._forTask = s.taskIndex;
+          el.descBox._forTask = v.index;
         }
       } else {
         el.descBtn.style.display = "none";
         el.descBox.classList.add("hidden");
       }
 
-      if (s.taskTarget) {
-        setText(el.taskRemain, fmtDistPools(s.taskRemaining, workout.poolLength));
-        setText(el.taskSub, `цель ${fmtMeters(s.taskTarget)} м`);
-      } else {
-        setText(el.taskRemain, `${fmtMeters(s.taskDone)} м`);
-        setText(el.taskSub, "без фиксированной цели");
-      }
+      // «К текущему» — видна только при просмотре не-активного задания.
+      el.toCurrentBtn.classList.toggle("hidden", !browsing);
+      el.swipeL.classList.toggle("off", viewIndex === 0);
+      el.swipeR.classList.toggle("off", viewIndex >= v.count - 1);
 
-      // Метрики плотности (обновляем на месте, только изменившееся).
-      setText(el.vLoad, formatDuration(s.loadTotal, { tenths: false }));
-      setText(el.vRest, formatDuration(s.restTotal, { tenths: false }));
-      setText(el.vDens, `${Math.round(s.density * 100)}%`);
-
-      el.undoBtn.disabled = !s.canUndo;
-      // Подсказки-шевроны свайпа: гаснут на границах плана.
-      el.swipeL.classList.toggle("off", s.taskIndex === 0);
-      el.swipeR.classList.toggle("off", s.isLastTask);
-
-      // Пауза. ВАЖНО: пишем текст только при изменении (см. setText) — иначе
-      // ежотиковая перезапись отменяет клик по кнопке на iOS.
-      setText(el.pauseBtn, s.paused ? "▶ Продолжить" : "⏸ Пауза");
-      el.pauseBtn.classList.toggle("resumed", s.paused);
-      screen.classList.toggle("paused", s.paused);
-
-      // Не даём переплыть цель задания; на паузе отсечки недоступны (не плывём).
+      // Отсечки/Undo относятся к АКТИВНОМУ заданию. При просмотре другого —
+      // блокируем (чтобы не путаться), активное при этом продолжает идти.
+      el.undoBtn.disabled = browsing || !s.canUndo;
       const rem = s.taskRemaining;
       const targeted = s.taskTarget > 0;
-      el.tap25.disabled = s.paused || (targeted && rem <= 0);
-      el.tap50.disabled = s.paused || (targeted && rem < 50);
+      el.tap25.disabled = browsing || s.paused || (targeted && rem <= 0);
+      el.tap50.disabled = browsing || s.paused || (targeted && rem < 50);
     }
 
     const interval = setInterval(tick, 100);
@@ -272,7 +291,9 @@ export function renderActiveWorkout(root, ctx) {
           finishFlow();
           return;
         }
+        // Задание доплыто → следующее (авто-пауза = отдых). Смотрим уже новое активное.
         workout.nextTask(Date.now());
+        viewIndex = workout.currentIndex;
         buzz(30);
         maybeShowRest();
       }
@@ -282,24 +303,21 @@ export function renderActiveWorkout(root, ctx) {
       if (workout.undo()) buzz(10);
       tick();
     }
+    // «К текущему» — вернуть просмотр на активное задание.
+    function goCurrent() {
+      if (viewIndex === workout.currentIndex) return;
+      const dir = workout.currentIndex > viewIndex ? "next" : "prev";
+      animateSwap(dir, () => { viewIndex = workout.currentIndex; tick(); });
+    }
+    // Свайп = ПРОСМОТР соседнего задания. Активное не меняется, пауза не ставится.
     let animating = false;
     function swipePrev() {
-      if (animating || workout.currentIndex === 0) return;
-      animateSwap("prev", () => {
-        workout.prevTask(Date.now());
-        buzz(20);
-        tick();
-      });
+      if (animating || viewIndex === 0) return;
+      animateSwap("prev", () => { viewIndex -= 1; tick(); });
     }
     function swipeNext() {
-      // На последнем задании дальше некуда — завершение через «Завершить тренировку».
-      if (animating || workout.isLastTask) return;
-      animateSwap("next", () => {
-        workout.nextTask(Date.now());
-        buzz(20);
-        maybeShowRest();
-        tick();
-      });
+      if (animating || viewIndex >= workout.plan.length - 1) return;
+      animateSwap("next", () => { viewIndex += 1; tick(); });
     }
     // Анимация «карусели»: уходящая карточка уезжает в сторону свайпа, а новая
     // одновременно въезжает с другой стороны.
@@ -366,12 +384,13 @@ export function renderActiveWorkout(root, ctx) {
     // Таблица разбивки: строки по 25 м, колонки 25 / 50 / 100 м. Время отрезка
     // длины N стоит в своей колонке на строке, где заканчивается этот отрезок
     // (50 — через строку, 100 — через три). Перерисовываем при изменении (кэш sdSig).
-    function renderSplitTable(s) {
+    function renderSplitTable(v) {
+      const markers = v.markers;
       const map = new Map();
-      for (const mk of workout.markers) map.set(mk.d, mk.t);
-      const done = workout.markers[workout.markers.length - 1].d;
-      const target = s.taskTarget || 0;
-      const sig = s.taskIndex + ":" + workout.markers.map((m) => m.d + "@" + m.t).join(",") + ":" + target;
+      for (const mk of markers) map.set(mk.d, mk.t);
+      const done = markers[markers.length - 1].d;
+      const target = v.target || 0;
+      const sig = v.index + ":" + v.status + ":" + markers.map((m) => m.d + "@" + m.t).join(",") + ":" + target;
       if (sig === sdSig) return;
       sdSig = sig;
       clear(el.splitTable);

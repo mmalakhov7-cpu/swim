@@ -180,6 +180,44 @@ export class Workout {
 
   // --- Данные для отрисовки ----------------------------------------------
 
+  /**
+   * Данные ЛЮБОГО задания для просмотра (без изменения активного).
+   * status: 'done' | 'active' | 'upcoming'. Для done берём записанный результат,
+   * для active — живые значения, для upcoming — план.
+   */
+  viewData(index, now) {
+    const count = this.plan.length;
+    const p = this.plan[index];
+    const pool = this.poolLength;
+    let status, name, target, done, taskTimeMs, markers;
+
+    if (index === this.currentIndex) {
+      status = "active";
+      name = p.name; target = p.targetDistance;
+      done = currentDistance(this.markers);
+      taskTimeMs = this._loadNow(now) - this.taskStartLoad;
+      markers = this.markers;
+    } else if (index < this.currentIndex) {
+      status = "done";
+      const r = this.completed[index];
+      name = r.name; target = r.targetDistance;
+      done = r.swumDistance; taskTimeMs = r.taskTimeMs;
+      markers = [{ d: 0, t: 0 }];
+      for (const sp of r.splits) markers.push({ d: sp.cumulativeDistance, t: sp.cumulativeTaskTimeMs });
+    } else {
+      status = "upcoming";
+      name = p.name; target = p.targetDistance;
+      done = 0; taskTimeMs = 0; markers = [{ d: 0, t: 0 }];
+    }
+
+    const remaining = target ? Math.max(0, target - done) : null;
+    return {
+      index, count, status, name, note: p.note, target, done,
+      remaining, poolsRemaining: target ? remaining / pool : null,
+      taskTimeMs, markers, isActive: status === "active",
+    };
+  }
+
   snapshot(now) {
     const p = this.currentPlan;
     const taskDone = currentDistance(this.markers);

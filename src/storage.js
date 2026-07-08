@@ -1,6 +1,7 @@
 // storage.js — ЕДИНСТВЕННЫЙ слой доступа к постоянному хранилищу.
-// Сейчас это localStorage; интерфейс намеренно узкий, чтобы позже без переделок
-// заменить бэкенд на IndexedDB. Другие модули к localStorage не обращаются.
+// Источник истины для чтения — localStorage (мгновенно, работает офлайн).
+// Каждое изменение дополнительно уведомляет подписчика (sync.js), который
+// отправляет его в Google Sheets. Так и офлайн работает, и данные в таблице.
 
 import { makeSettings } from "./models.js";
 
@@ -9,6 +10,22 @@ const KEYS = {
   templates: "swim.templates.v1",
   sessions: "swim.sessions.v1",
 };
+
+// Подписка на изменения (для синхронизации). emit() вызывается ПОСЛЕ записи.
+let mutationHook = null;
+export function onMutation(fn) { mutationHook = fn; }
+function emit(action, payload) {
+  if (mutationHook) {
+    try { mutationHook(action, payload); } catch (e) { console.warn("sync hook", e); }
+  }
+}
+
+/** Заменить локальные данные пришедшими (из синхронизации). Без emit(). */
+export function replaceAllLocal(data) {
+  if (data.settings) writeJSON(KEYS.settings, makeSettings(data.settings));
+  writeJSON(KEYS.templates, data.templates || []);
+  writeJSON(KEYS.sessions, data.sessions || []);
+}
 
 function readJSON(key, fallback) {
   try {
@@ -38,6 +55,7 @@ export function getSettings() {
 
 export function saveSettings(settings) {
   writeJSON(KEYS.settings, settings);
+  emit("saveSettings", settings);
   return settings;
 }
 
@@ -52,6 +70,7 @@ export function saveTemplate(template) {
   if (i >= 0) list[i] = template;
   else list.push(template);
   writeJSON(KEYS.templates, list);
+  emit("saveTemplate", template);
   return template;
 }
 
@@ -60,6 +79,7 @@ export function deleteTemplate(id) {
     KEYS.templates,
     getTemplates().filter((t) => t.id !== id)
   );
+  emit("deleteTemplate", { id });
 }
 
 // --- Проведённые тренировки ---------------------------------------------
@@ -76,6 +96,7 @@ export function addSession(session) {
   const list = getSessions_raw();
   list.push(session);
   writeJSON(KEYS.sessions, list);
+  emit("addSession", session);
   return session;
 }
 
@@ -84,6 +105,7 @@ export function deleteSession(id) {
     KEYS.sessions,
     getSessions_raw().filter((s) => s.id !== id)
   );
+  emit("deleteSession", { id });
 }
 
 export function getSession(id) {
@@ -120,16 +142,18 @@ export function importAll(data, mode = "replace") {
     if (data.settings) writeJSON(KEYS.settings, data.settings);
     writeJSON(KEYS.templates, data.templates || []);
     writeJSON(KEYS.sessions, data.sessions || []);
-    return;
-  }
-  // merge
-  const tpl = getTemplates();
-  const tplIds = new Set(tpl.map((t) => t.id));
-  for (const t of data.templates || []) if (!tplIds.has(t.id)) tpl.push(t);
-  writeJSON(KEYS.templates, tpl);
+  } else {
+    // merge
+    const tpl = getTemplates();
+    const tplIds = new Set(tpl.map((t) => t.id));
+    for (const t of data.templates || []) if (!tplIds.has(t.id)) tpl.push(t);
+    writeJSON(KEYS.templates, tpl);
 
-  const ses = getSessions_raw();
-  const sesIds = new Set(ses.map((s) => s.id));
-  for (const s of data.sessions || []) if (!sesIds.has(s.id)) ses.push(s);
-  writeJSON(KEYS.sessions, ses);
+    const ses = getSessions_raw();
+    const sesIds = new Set(ses.map((s) => s.id));
+    for (const s of data.sessions || []) if (!sesIds.has(s.id)) ses.push(s);
+    writeJSON(KEYS.sessions, ses);
+  }
+  // Синхронизируем итоговое состояние в таблицу (полная замена).
+  emit("importAll", exportAll());
 }
