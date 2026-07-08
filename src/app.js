@@ -80,6 +80,17 @@ window.addEventListener("DOMContentLoaded", route);
 // На случай, если DOMContentLoaded уже прошёл к моменту загрузки модуля.
 if (document.readyState !== "loading") route();
 
+// Полный запрет масштабирования. Пинч двумя пальцами iOS Safari не отключает
+// через viewport/touch-action (доступность), поэтому гасим жесты в JS.
+document.addEventListener("gesturestart", (e) => e.preventDefault());
+document.addEventListener("gesturechange", (e) => e.preventDefault());
+document.addEventListener("gestureend", (e) => e.preventDefault());
+document.addEventListener(
+  "touchmove",
+  (e) => { if (e.touches.length > 1) e.preventDefault(); },
+  { passive: false }
+);
+
 // Синхронизация с Google Sheets. После подтягивания данных — обновляем настройки
 // и перерисовываем текущий экран (но не во время активной тренировки).
 sync.init(() => {
