@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Дневник тренировок в бассейне</title>
+  <meta name="theme-color" content="#0b1622" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles/main.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏊</text></svg>" />
+</head>
+<body>
+  <main id="view"><!-- экраны монтируются сюда --></main>
+
+  <!-- Chart.js — ЛОКАЛЬНАЯ копия, глобальный window.Chart (не ES-модуль). -->
+  <script src="./vendor/chart.min.js"></script>
+  <!-- Приложение — ES-модули. -->
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
