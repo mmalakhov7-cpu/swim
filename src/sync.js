@@ -12,7 +12,7 @@ import * as storage from "./storage.js";
 
 // URL веб-приложения Apps Script (…/exec).
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbyHVEnrYNRKTKUB7RtD4vKE1Jx0XroYm7fqY-HlnTI3qIthU_VXVQYGv5wCfL5no1zKMg/exec";
+  "https://script.google.com/macros/s/AKfycbwskdUOFnzbXSkY-uethZIExM7XkA8QhEaFhPeYfsVCaPTcEfTe7OJjWLpRgnRkQDIReg/exec";
 
 const QUEUE_KEY = "swim.syncQueue.v1";
 
