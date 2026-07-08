@@ -174,16 +174,18 @@ export function renderActiveWorkout(root, ctx) {
 
       el.splitTable,
       el.restBanner,
-
-      // Отсечки + отмена последнего сплита в одной строке.
-      h("div.tap-row",
-        (el.tap25 = h("button.tap.tap25", { onclick: () => onTap(25) }, "+25 м")),
-        (el.tap50 = h("button.tap.tap50", { onclick: () => onTap(50) }, "+50 м")),
-        el.undoBtn,
-      ),
-      // Пауза: останавливает время под нагрузкой (общее продолжает идти).
-      el.pauseBtn,
       h("button.secondary.finish", { onclick: onFinish }, "Завершить тренировку"),
+
+      // Фиксированная панель управления снизу — всегда под пальцем. Контент
+      // выше скроллится свободно (у таблицы больше нет своего скролла).
+      h("div.action-bar",
+        h("div.tap-row",
+          (el.tap25 = h("button.tap.tap25", { onclick: () => onTap(25) }, "+25 м")),
+          (el.tap50 = h("button.tap.tap50", { onclick: () => onTap(50) }, "+50 м")),
+          el.undoBtn,
+        ),
+        el.pauseBtn,
+      ),
     );
     root.appendChild(screen);
 
