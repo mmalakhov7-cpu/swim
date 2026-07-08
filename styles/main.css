@@ -471,8 +471,8 @@ button { font-family: inherit; touch-action: manipulation; }
 .tap:active { transform: scale(0.98); filter: brightness(1.04); }
 .tap25 { background: linear-gradient(135deg, #4fc3e0, #5fe3cf); box-shadow: 0 6px 20px rgba(79, 195, 224, 0.20); }
 .tap50 { background: linear-gradient(135deg, #8ea2f0, #b199f2); box-shadow: 0 6px 20px rgba(142, 162, 240, 0.20); }
-.tap:disabled { opacity: 0.25; filter: grayscale(0.5); box-shadow: none; cursor: default; }
-.tap:disabled:active { transform: none; }
+.tap.off { opacity: 0.25; filter: grayscale(0.5); box-shadow: none; cursor: default; }
+.tap.off:active { transform: none; filter: grayscale(0.5); }
 
 /* Компактная «Отмена» (↶) в строке с +25/+50 */
 .undo-tap {
@@ -490,7 +490,8 @@ button { font-family: inherit; touch-action: manipulation; }
 }
 .undo-tap svg { display: block; }
 .undo-tap:active { background: rgba(230, 185, 104, 0.20); }
-.undo-tap:disabled { opacity: 0.3; }
+.undo-tap.off { opacity: 0.3; cursor: default; }
+.undo-tap.off:active { background: rgba(230, 185, 104, 0.12); }
 
 .ctrl-row { display: flex; gap: 12px; }
 .ctrl {

@@ -270,19 +270,22 @@ export function renderActiveWorkout(root, ctx) {
       el.swipeL.classList.toggle("off", viewIndex === 0);
       el.swipeR.classList.toggle("off", viewIndex >= v.count - 1);
 
-      // Отсечки/Undo относятся к АКТИВНОМУ заданию. При просмотре другого —
-      // блокируем (чтобы не путаться), активное при этом продолжает идти.
-      el.undoBtn.disabled = browsing || !s.canUndo;
+      // Недоступность гасим КЛАССОМ, а не атрибутом disabled: на disabled-кнопках
+      // iOS Safari игнорирует touch-action → двойной тап зумит. С классом кнопка
+      // остаётся «живой» (touch-action работает), а тап игнорируем в onTap/onUndo.
       const rem = s.taskRemaining;
       const targeted = s.taskTarget > 0;
-      el.tap25.disabled = browsing || s.paused || (targeted && rem <= 0);
-      el.tap50.disabled = browsing || s.paused || (targeted && rem < 50);
+      el.undoBtn.classList.toggle("off", browsing || !s.canUndo);
+      el.tap25.classList.toggle("off", browsing || s.paused || (targeted && rem <= 0));
+      el.tap50.classList.toggle("off", browsing || s.paused || (targeted && rem < 50));
     }
 
     const interval = setInterval(tick, 100);
     tick();
 
     function onTap(step) {
+      // Кнопка «погашена» (пауза/просмотр/переплыв) — игнорируем тап.
+      if ((step === 25 ? el.tap25 : el.tap50).classList.contains("off")) return;
       workout.tapSplit(step, Date.now());
       buzz();
       const s = workout.snapshot(Date.now());
@@ -302,6 +305,7 @@ export function renderActiveWorkout(root, ctx) {
       tick();
     }
     function onUndo() {
+      if (el.undoBtn.classList.contains("off")) return;
       if (workout.undo()) buzz(10);
       tick();
     }
