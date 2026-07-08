@@ -38,6 +38,9 @@ html, body {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Запрет двойного-тапа-зума (на iOS meta игнорируется, а это работает).
+     Вертикальный скролл остаётся. */
+  touch-action: manipulation;
 }
 
 #view { min-height: 100vh; }
