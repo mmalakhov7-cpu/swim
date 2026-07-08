@@ -303,6 +303,9 @@ button { font-family: inherit; touch-action: manipulation; }
 
 /* Свайп по карточке задания + пейджер-подсказка «‹ 1 / 3 ›» */
 .card.task.swipeable { touch-action: pan-y; }
+.task-viewport { position: relative; overflow: hidden; }
+.task-slide { will-change: transform; }
+.task-slide.ghost { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
 .task-pager {
   display: flex;
   align-items: center;

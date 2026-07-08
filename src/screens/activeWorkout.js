@@ -150,15 +150,19 @@ export function renderActiveWorkout(root, ctx) {
       ),
 
       (el.taskCard = h("section.card.task.swipeable",
-        h("div.task-head-row", el.taskName, el.descBtn),
-        el.descBox,
-        h("div.hero-row",
-          h("div.hero-metric",
-            h("div.metric-label", "Осталось по заданию"),
-            el.taskRemain, el.taskSub),
-          taskTimer,
+        h("div.task-viewport",
+          (el.taskSlide = h("div.task-slide",
+            h("div.task-head-row", el.taskName, el.descBtn),
+            el.descBox,
+            h("div.hero-row",
+              h("div.hero-metric",
+                h("div.metric-label", "Осталось по заданию"),
+                el.taskRemain, el.taskSub),
+              taskTimer,
+            ),
+            h("div.task-pager", el.swipeL, el.pagerCount, el.swipeR),
+          )),
         ),
-        h("div.task-pager", el.swipeL, el.pagerCount, el.swipeR),
       )),
 
       el.splitTable,
@@ -278,17 +282,62 @@ export function renderActiveWorkout(root, ctx) {
       if (workout.undo()) buzz(10);
       tick();
     }
+    let animating = false;
     function swipePrev() {
-      if (workout.prevTask(Date.now())) buzz(20);
-      tick();
+      if (animating || workout.currentIndex === 0) return;
+      animateSwap("prev", () => {
+        workout.prevTask(Date.now());
+        buzz(20);
+        tick();
+      });
     }
     function swipeNext() {
       // На последнем задании дальше некуда — завершение через «Завершить тренировку».
-      if (workout.isLastTask) return;
-      workout.nextTask(Date.now());
-      buzz(20);
-      maybeShowRest();
-      tick();
+      if (animating || workout.isLastTask) return;
+      animateSwap("next", () => {
+        workout.nextTask(Date.now());
+        buzz(20);
+        maybeShowRest();
+        tick();
+      });
+    }
+    // Анимация «карусели»: уходящая карточка уезжает в сторону свайпа, а новая
+    // одновременно въезжает с другой стороны.
+    function animateSwap(dir, commit) {
+      const slide = el.taskSlide;
+      const vp = slide.parentElement;
+      const w = vp.clientWidth || 320;
+      const sign = dir === "next" ? -1 : 1; // next → уходим влево
+      animating = true;
+
+      // Снимок уходящего задания (клон), поверх вьюпорта.
+      const ghost = slide.cloneNode(true);
+      ghost.classList.add("ghost");
+      vp.appendChild(ghost);
+
+      // Реальный слайд получает новое содержимое и встаёт за краем (входящая сторона).
+      commit();
+      slide.style.transition = "none";
+      slide.style.transform = `translateX(${-sign * w}px)`;
+      void slide.offsetWidth; // reflow
+
+      const ease = "transform 240ms cubic-bezier(.22,.61,.36,1)";
+      ghost.style.transition = ease;
+      slide.style.transition = ease;
+      ghost.style.transform = `translateX(${sign * w}px)`;
+      slide.style.transform = "translateX(0)";
+
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        ghost.remove();
+        slide.style.transition = "none";
+        slide.style.transform = "";
+        animating = false;
+      };
+      slide.addEventListener("transitionend", finish, { once: true });
+      setTimeout(finish, 320);
     }
     // Свайп по карточке задания: вправо → предыдущее, влево → следующее.
     function setupTaskSwipe(card) {
