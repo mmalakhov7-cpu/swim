@@ -129,6 +129,15 @@ function rows_(key) {
 
 function bool_(v) { return v === true || v === 'true' || v === 1; }
 
+// Дата в "yyyy-MM-dd". Google Sheets мог превратить строку даты в ячейку-дату —
+// тогда getValues вернёт Date, и без нормализации получим кривую строку.
+function dateStr_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  return String(v);
+}
+
 function getAll_() {
   // settings
   var settings = { poolLength: 25, units: 'm', keepAwake: true, showTenths: true };
@@ -181,7 +190,7 @@ function getAll_() {
       .sort(function (a, b) { return a.order - b.order; })
       .map(function (t) { delete t.order; return t; });
     return {
-      id: String(r.sessionId), date: String(r.date),
+      id: String(r.sessionId), date: dateStr_(r.date),
       startTime: Number(r.startTime) || 0, endTime: Number(r.endTime) || 0,
       templateId: r.templateId ? String(r.templateId) : null,
       totalTargetDistance: Number(r.totalTarget) || 0,

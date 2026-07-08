@@ -70,10 +70,28 @@ export function fmtHuman(ms) {
   return `${m} мин`;
 }
 
-/** Красивая дата YYYY-MM-DD → «7 июля 2026». */
 const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
-export function fmtDateHuman(iso) {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y) return iso;
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+const MONTHS_SHORT = ["янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
+
+/** Разбирает "YYYY-MM-DD" ИЛИ любую парсируемую дату (в т.ч. кривую строку из
+    Google Sheets вроде «Wed Jul 08 2026 …»). Возвращает {y,m,d} или null. */
+function parseDate(input) {
+  const s = String(input);
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (iso) return { y: +iso[1], m: +iso[2], d: +iso[3] };
+  const dt = new Date(s);
+  if (isNaN(dt.getTime())) return null;
+  return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
+}
+
+/** «8 июля 2026». Устойчиво к формату входа. */
+export function fmtDateHuman(input) {
+  const p = parseDate(input);
+  return p ? `${p.d} ${MONTHS[p.m - 1]} ${p.y}` : String(input);
+}
+
+/** Короткая дата «8 июл» (для оси графика). */
+export function fmtDateShort(input) {
+  const p = parseDate(input);
+  return p ? `${p.d} ${MONTHS_SHORT[p.m - 1]}` : String(input);
 }

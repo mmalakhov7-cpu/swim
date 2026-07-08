@@ -4,7 +4,7 @@
 
 import { getSessions, cumulativeVolume } from "../storage.js";
 import { renderVolumeChart } from "../charts.js";
-import { h, fmtMeters, fmtHuman, fmtDateHuman } from "../ui.js";
+import { h, fmtMeters, fmtHuman, fmtDateHuman, fmtDateShort } from "../ui.js";
 
 export function renderDashboard(root, ctx) {
   const sessions = getSessions(); // старые → новые
@@ -81,7 +81,7 @@ function volumeCard(sessions, vals) {
       let acc = 0;
       const points = sessions.map((s) => {
         acc += s.totalSwumDistance;
-        return { date: s.date, cumulative: acc };
+        return { date: fmtDateShort(s.date), cumulative: acc };
       });
       queueMicrotask(() => {
         try { renderVolumeChart(canvas, points); } catch (e) { console.warn(e); }
