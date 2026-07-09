@@ -172,7 +172,7 @@ export function renderActiveWorkout(root, ctx) {
         ),
       )),
 
-      el.splitTable,
+      (el.splitScroll = h("div.split-scroll", el.splitTable)),
       el.restBanner,
       h("button.secondary.finish", { onclick: onFinish }, "Завершить тренировку"),
 
@@ -188,6 +188,9 @@ export function renderActiveWorkout(root, ctx) {
       ),
     );
     root.appendChild(screen);
+    // Живая фаза — фиксируем экран (страница не скроллится, скроллится только
+    // окно сплитов). Снимаем в stop() при выходе/финише.
+    document.body.classList.add("active-lock");
 
     // Свайп по карточке задания: вправо — предыдущее, влево — следующее.
     setupTaskSwipe(el.taskCard);
@@ -469,6 +472,17 @@ export function renderActiveWorkout(root, ctx) {
         );
       }
       el.splitTable.append(grid);
+
+      // Автопрокрутка окна сплитов (только при перерисовке): держим последний
+      // ПРОПЛЫТЫЙ отрезок у нижнего края — так всегда видно последние ~4 строки
+      // и текущую позицию, а пустые «предстоит» уходят вниз за край. Просмотр
+      // соседнего задания — к началу.
+      if (el.splitScroll) {
+        const lastRow = v.status === "active" ? grid.querySelector(".st-last") : null;
+        el.splitScroll.scrollTop = lastRow
+          ? lastRow.offsetTop + lastRow.offsetHeight - el.splitScroll.clientHeight
+          : 0;
+      }
     }
     function onFinish() {
       if (confirm("Завершить тренировку и сохранить?")) finishFlow(Date.now());
@@ -551,6 +565,7 @@ export function renderActiveWorkout(root, ctx) {
     function stop() {
       clearInterval(interval);
       wake.disable();
+      document.body.classList.remove("active-lock");
     }
 
     ctx.onCleanup(() => stop());
