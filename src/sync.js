@@ -55,6 +55,7 @@ async function flushQueue() {
         try {
           await apiPost("batch", { ops }); // вся очередь одним запросом
           saveQueue(loadQueue().slice(ops.length));
+          emitStatus();
           continue;
         } catch (e) {
           if (String((e && e.message) || e).indexOf("unknown action") >= 0) {
@@ -69,6 +70,7 @@ async function flushQueue() {
       const q2 = loadQueue();
       q2.shift();
       saveQueue(q2);
+      emitStatus();
     }
   } catch (e) {
     // офлайн/ошибка — очередь остаётся на потом
@@ -77,38 +79,56 @@ async function flushQueue() {
   }
 }
 
+// --- Статус синхронизации (для индикатора в UI) ---
+let syncing = false;
+let statusFns = [];
+export function status() { return { syncing, pending: loadQueue().length }; }
+function emitStatus() {
+  const s = status();
+  statusFns.forEach((fn) => { try { fn(s); } catch (e) {} });
+}
+/** Подписка на изменения статуса. Возвращает функцию отписки. */
+export function onStatus(fn) {
+  statusFns.push(fn);
+  fn(status());
+  return () => { statusFns = statusFns.filter((f) => f !== fn); };
+}
+
 // Ставим изменение в очередь и пытаемся отправить.
 export function enqueue(action, payload) {
   const q = loadQueue();
   q.push({ action, payload, t: Date.now() });
   saveQueue(q);
+  emitStatus();
   flushQueue();
 }
 
 let onPulled = null;
-let syncing = false;
 
-async function syncNow() {
+/** Синхронизация: досылаем очередь и подтягиваем данные из таблицы. */
+export async function syncNow() {
   if (syncing) return;
   syncing = true;
+  emitStatus();
   try {
     await flushQueue();
-    if (loadQueue().length) return; // не всё ушло (офлайн) — не перетираем локальное
-    const remote = await apiGetAll();
-    const remoteEmpty = !(remote.templates || []).length && !(remote.sessions || []).length;
-    const localHasData = storage.getTemplates().length || storage.getSessions().length;
-    if (remoteEmpty && localHasData) {
-      // Первая миграция: локальные данные → в таблицу.
-      await apiPost("importAll", storage.exportAll());
-    } else {
-      // Таблица — источник истины.
-      storage.replaceAllLocal(remote);
-      if (onPulled) { try { onPulled(); } catch (e) { console.warn(e); } }
+    emitStatus();
+    if (loadQueue().length === 0) {
+      const remote = await apiGetAll();
+      const remoteEmpty = !(remote.templates || []).length && !(remote.sessions || []).length;
+      const localHasData = storage.getTemplates().length || storage.getSessions().length;
+      if (remoteEmpty && localHasData) {
+        await apiPost("importAll", storage.exportAll()); // первая миграция вверх
+      } else {
+        storage.replaceAllLocal(remote); // таблица — источник истины
+        if (onPulled) { try { onPulled(); } catch (e) { console.warn(e); } }
+      }
     }
   } catch (e) {
     console.debug("sync: офлайн/ошибка", e && e.message);
   } finally {
     syncing = false;
+    emitStatus();
   }
 }
 

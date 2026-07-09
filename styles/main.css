@@ -74,7 +74,32 @@ html, body {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
-.appbar-actions { display: flex; gap: 8px; }
+.appbar-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Индикатор синхронизации с Google */
+.sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sync-chip:active { background: var(--card-2); }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+.sync-chip[data-state="ok"] { color: var(--green); }
+.sync-chip[data-state="ok"] .sync-dot { background: var(--green); }
+.sync-chip[data-state="pending"] { color: var(--amber); }
+.sync-chip[data-state="pending"] .sync-dot { background: var(--amber); }
+.sync-chip[data-state="syncing"] { color: var(--accent); }
+.sync-chip[data-state="syncing"] .sync-dot { background: var(--accent); animation: syncpulse 0.9s ease-in-out infinite; }
+@keyframes syncpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 .icon-btn {
   min-width: 44px;

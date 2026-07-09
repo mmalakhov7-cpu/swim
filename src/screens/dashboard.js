@@ -4,6 +4,7 @@
 
 import { getSessions, cumulativeVolume } from "../storage.js";
 import { renderVolumeChart } from "../charts.js";
+import { syncNow, onStatus } from "../sync.js";
 import { h, fmtMeters, fmtHuman, fmtDateHuman, fmtDateShort } from "../ui.js";
 
 export function renderDashboard(root, ctx) {
@@ -25,8 +26,11 @@ export function renderDashboard(root, ctx) {
 
   root.appendChild(
     h("div.screen",
-      // 1. Заголовок
-      h("header.appbar", h("h1", "Дневник бассейна")),
+      // 1. Заголовок + индикатор синхронизации с Google
+      h("header.appbar",
+        h("h1", "Дневник бассейна"),
+        h("div.appbar-actions", syncChip(ctx)),
+      ),
 
       // 2. Действие
       h("button.big-primary", { onclick: () => ctx.navigate("#/prepare") }, "Начать тренировку"),
@@ -124,4 +128,18 @@ function menuItem(ctx, icon, title, sub, hash) {
     ),
     h("span.menu-chev", "›"),
   );
+}
+
+// Индикатор синхронизации с Google. Тап — принудительно подтянуть/отправить.
+function syncChip(ctx) {
+  const dot = h("span.sync-dot");
+  const label = h("span.sync-label");
+  const chip = h("button.sync-chip",
+    { onclick: () => syncNow(), title: "Синхронизация с Google Sheets" }, dot, label);
+  const unsub = onStatus((s) => {
+    chip.dataset.state = s.syncing ? "syncing" : s.pending > 0 ? "pending" : "ok";
+    label.textContent = s.syncing ? "Синхр…" : s.pending > 0 ? `${s.pending} ↑` : "Синхр.";
+  });
+  if (ctx && ctx.onCleanup) ctx.onCleanup(unsub);
+  return chip;
 }
