@@ -30,6 +30,24 @@ const UNDO_SVG =
   'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>';
 
+// Пауза (две полосы) и Продолжить (треугольник) — вместо «ущербных» эмодзи.
+const PAUSE_SVG =
+  '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">' +
+  '<rect x="6" y="4.5" width="4.2" height="15" rx="1.4"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.4"/></svg>';
+const PLAY_SVG =
+  '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">' +
+  '<path d="M7.5 5.2v13.6a1 1 0 0 0 1.53.85l10.7-6.8a1 1 0 0 0 0-1.7L9.03 4.35A1 1 0 0 0 7.5 5.2z"/></svg>';
+
+// Развернуть / свернуть окно сплитов (диагональные стрелки).
+const EXPAND_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M9 4H4v5"/><path d="M15 20h5v-5"/><path d="M4 4l6 6"/><path d="M20 20l-6-6"/></svg>';
+const COLLAPSE_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M4 9h5V4"/><path d="M20 15h-5v5"/><path d="M9 9L3 3"/><path d="M15 15l6 6"/></svg>';
+
 export function renderActiveWorkout(root, ctx) {
   const pending = ctx.state.pendingStart;
   if (!pending) {
@@ -107,6 +125,8 @@ export function renderActiveWorkout(root, ctx) {
     const taskTimer = timer("Задание", "big");
     let sdSig = ""; // сигнатура последней отрисовки таблицы разбивки (кэш)
     let viewIndex = 0; // какое задание СМОТРИМ (не обязательно активное)
+    let lastPaused = null; // кэш состояния паузы (для перерисовки кнопки)
+    let expanded = false;  // развёрнуто ли окно сплитов на весь экран
 
     el.totalRemain = h("div.metric-val");
     el.totalSub = h("div.metric-sub");
@@ -134,7 +154,9 @@ export function renderActiveWorkout(root, ctx) {
       onclick: onUndo, html: UNDO_SVG,
       title: "Отменить последний сплит", "aria-label": "Отменить последний сплит",
     });
-    el.pauseBtn = h("button.ctrl.pause", { onclick: onPause }, "⏸ Пауза");
+    el.pauseIcon = h("span.ctrl-ic", { html: PAUSE_SVG });
+    el.pauseLabel = h("span", "Пауза");
+    el.pauseBtn = h("button.ctrl.pause", { onclick: onPause }, el.pauseIcon, el.pauseLabel);
     el.swipeL = h("span.swipe-hint.left", "‹");
     el.swipeR = h("span.swipe-hint.right", "›");
     el.pagerCount = h("span.pager-count");
@@ -174,10 +196,9 @@ export function renderActiveWorkout(root, ctx) {
 
       (el.splitScroll = h("div.split-scroll", el.splitTable)),
       el.restBanner,
-      h("button.secondary.finish", { onclick: onFinish }, "Завершить тренировку"),
 
-      // Фиксированная панель управления снизу — всегда под пальцем. Контент
-      // выше скроллится свободно (у таблицы больше нет своего скролла).
+      // Закреплённая панель снизу: отсечки + пауза, «Завершить» — самым низом,
+      // компактной ссылкой (чтобы не занимала место у окна сплитов).
       h("div.action-bar",
         h("div.tap-row",
           (el.tap25 = h("button.tap.tap25", { onclick: () => onTap(25) }, "+25 м")),
@@ -185,6 +206,7 @@ export function renderActiveWorkout(root, ctx) {
           el.undoBtn,
         ),
         el.pauseBtn,
+        h("button.finish-min", { onclick: onFinish }, "Завершить тренировку"),
       ),
     );
     root.appendChild(screen);
@@ -221,8 +243,15 @@ export function renderActiveWorkout(root, ctx) {
       setText(el.vLoad, formatDuration(s.loadTotal, { tenths: false }));
       setText(el.vRest, formatDuration(s.restTotal, { tenths: false }));
       setText(el.vDens, `${Math.round(s.density * 100)}%`);
-      setText(el.pauseBtn, s.paused ? "▶ Продолжить" : "⏸ Пауза");
-      el.pauseBtn.classList.toggle("resumed", s.paused);
+      // Пауза/Продолжить — иконка + подпись. Перерисовываем ТОЛЬКО при смене
+      // состояния (иначе на iOS переписывание содержимого во время касания
+      // отменяет клик — та же причина, что и у setText).
+      if (s.paused !== lastPaused) {
+        el.pauseIcon.innerHTML = s.paused ? PLAY_SVG : PAUSE_SVG;
+        el.pauseLabel.textContent = s.paused ? "Продолжить" : "Пауза";
+        el.pauseBtn.classList.toggle("resumed", s.paused);
+        lastPaused = s.paused;
+      }
       screen.classList.toggle("paused", s.paused);
 
       // ===== Карточка задания и таблица — по ПРОСМАТРИВАЕМОМУ заданию =====
@@ -406,6 +435,14 @@ export function renderActiveWorkout(root, ctx) {
       const hidden = el.descBox.classList.toggle("hidden");
       el.descBtn.classList.toggle("open", !hidden);
     }
+    // Развернуть/свернуть окно сплитов: в развёрнутом виде прячем верхнюю карточку
+    // тренировки — окно занимает почти весь экран (видно много отрезков).
+    function toggleExpand() {
+      expanded = !expanded;
+      screen.classList.toggle("split-expanded", expanded);
+      sdSig = ""; // пересобрать таблицу (иконка) + пересчитать автопрокрутку
+      tick();
+    }
     // Таблица разбивки: строки по 25 м, колонки 25 / 50 / 100 м. Время отрезка
     // длины N стоит в своей колонке на строке, где заканчивается этот отрезок
     // (50 — через строку, 100 — через три). Перерисовываем при изменении (кэш sdSig).
@@ -421,8 +458,16 @@ export function renderActiveWorkout(root, ctx) {
       el.splitTable.append(
         h("div.st-head",
           h("span.st-title", "Разбивка задания"),
-          h("span.st-sub",
-            target ? `${fmtMeters(done)} / ${fmtMeters(target)} м` : `${fmtMeters(done)} м`),
+          h("span.st-right",
+            h("span.st-sub",
+              target ? `${fmtMeters(done)} / ${fmtMeters(target)} м` : `${fmtMeters(done)} м`),
+            h("button.st-expand", {
+              onclick: toggleExpand,
+              html: expanded ? COLLAPSE_SVG : EXPAND_SVG,
+              title: expanded ? "Свернуть" : "Развернуть окно сплитов",
+              "aria-label": expanded ? "Свернуть" : "Развернуть окно сплитов",
+            }),
+          ),
         )
       );
 

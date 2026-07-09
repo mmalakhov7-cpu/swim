@@ -317,9 +317,22 @@ button { font-family: inherit; touch-action: manipulation; }
 .screen.active {
   height: 100%;
   overflow: hidden;
-  gap: 10px;
-  padding: 10px 16px 0;
+  gap: 8px;
+  padding: 8px 14px 0;
 }
+
+/* Компактные карточки в кокпите — освобождаем место окну сплитов (≥4 строки). */
+.screen.active .card { padding: 12px 15px; }
+.screen.active .progress { margin: 10px 0 2px; }
+.screen.active .density-row { margin-top: 10px; }
+.screen.active .density-chip { padding: 6px 4px; }
+.screen.active .density-val { font-size: 15px; }
+.screen.active .task-name { margin-bottom: 3px; }
+.screen.active .task-pager { margin-top: 8px; padding-top: 8px; }
+
+/* Развёрнутое окно сплитов: прячем верхнюю карточку тренировки — окно сплитов
+   занимает почти весь экран (по стрелке ⤢ в шапке окна). */
+.screen.active.split-expanded .card.top { display: none; }
 
 /* Окно сплитов — ЕДИНСТВЕННАЯ прокручиваемая область. Само по себе — карточка,
    таблица внутри «плоская». Автопрокрутка держит последний отрезок на виду. */
@@ -335,36 +348,59 @@ button { font-family: inherit; touch-action: manipulation; }
   box-shadow: var(--shadow);
 }
 .split-scroll .split-table { background: transparent; border: none; box-shadow: none; border-radius: 0; padding: 0; }
-/* Заголовок таблицы («Разбивка … 175 / 400 м») закреплён сверху окна. */
+/* Заголовок таблицы («Разбивка … 175 / 400 м» + кнопка развернуть) закреплён. */
 .split-scroll .st-head {
   position: sticky;
   top: 0;
   z-index: 1;
   margin: 0;
-  padding: 12px 16px 8px;
+  padding: 11px 14px 7px;
   background: var(--card);
   border-bottom: 1px solid var(--line);
+  align-items: center;
 }
-.split-scroll .st-grid { padding: 2px 16px 8px; }
-.split-scroll .st-empty { padding: 12px 16px; }
+.split-scroll .st-grid { padding: 0 14px 6px; }
+.split-scroll .st-row { padding: 7px 2px; }
+.split-scroll .st-empty { padding: 12px 14px; }
 
-/* «Завершить» — компактно и всегда на виду над кнопками. */
-.screen.active .finish { flex: 0 0 auto; min-height: 46px; margin: 0; }
+.st-right { display: flex; align-items: center; gap: 10px; }
+.st-expand {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border: 1px solid var(--line-2); border-radius: 9px;
+  background: var(--bg-2); color: var(--muted); cursor: pointer;
+}
+.st-expand:active { background: var(--card-2); color: var(--text); }
+.st-expand svg { display: block; }
 
-/* Панель управления снизу — обычный нижний блок фикс-экрана (не position:fixed),
-   в край экрана (компенсируем боковые поля .screen отрицательным margin). */
+/* Панель управления снизу (не fixed) — компактнее, в край экрана. */
 .action-bar {
   flex: 0 0 auto;
-  margin: 0 -16px;
-  padding: 12px 16px calc(10px + env(safe-area-inset-bottom));
+  margin: 0 -14px;
+  padding: 10px 14px calc(8px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   background: rgba(10, 14, 19, 0.82);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.38);
 }
+
+/* «Завершить тренировку» — самой нижней компактной ссылкой (не занимает место). */
+.finish-min {
+  align-self: center;
+  min-height: 30px;
+  padding: 3px 14px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.finish-min:active { color: var(--text); }
 
 .metric-label { font-size: 11px; color: var(--muted); }
 .metric-val { font-size: 30px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 3px; }
@@ -506,11 +542,18 @@ button { font-family: inherit; touch-action: manipulation; }
 /* Пауза */
 .ctrl.pause {
   width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: rgba(230, 185, 104, 0.14);
   color: var(--amber);
   font-weight: 600;
 }
 .ctrl.pause.resumed { color: var(--green); background: rgba(99, 214, 164, 0.16); }
+.ctrl-ic { display: inline-flex; align-items: center; }
+.ctrl-ic svg { display: block; }
 /* Индикация паузы: приглушаем только кнопки-отсечки и таблицу (отмена остаётся). */
 .screen.active.paused .card.task,
 .screen.active.paused .split-table,
@@ -521,10 +564,10 @@ button { font-family: inherit; touch-action: manipulation; }
 .tap-row { display: flex; gap: 12px; }
 .tap {
   flex: 1;
-  min-height: 72px;
+  min-height: 58px;
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--ink);
@@ -543,8 +586,8 @@ button { font-family: inherit; touch-action: manipulation; }
 /* Компактная «Отмена» (↶) в строке с +25/+50 */
 .undo-tap {
   flex: 0 0 auto;
-  width: 66px;
-  min-height: 72px;
+  width: 60px;
+  min-height: 58px;
   border: none;
   border-radius: var(--radius-sm);
   background: rgba(230, 185, 104, 0.12);
