@@ -20,9 +20,15 @@ function emit(action, payload) {
   }
 }
 
-/** Заменить локальные данные пришедшими (из синхронизации). Без emit(). */
+/** Заменить локальные данные пришедшими (из синхронизации). Без emit().
+ *  Настройки СЛИВАЕМ по ключам (таблица главнее для своих ключей, но локальные
+ *  ключи, которых бэкенд ещё не знает, сохраняем) — чтобы новые настройки не
+ *  сбрасывались на дефолт при каждом обновлении из таблицы. */
 export function replaceAllLocal(data) {
-  if (data.settings) writeJSON(KEYS.settings, makeSettings(data.settings));
+  if (data.settings) {
+    const merged = { ...getSettings(), ...data.settings };
+    writeJSON(KEYS.settings, makeSettings(merged));
+  }
   writeJSON(KEYS.templates, data.templates || []);
   writeJSON(KEYS.sessions, data.sessions || []);
 }

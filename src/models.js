@@ -17,6 +17,8 @@ export function makeSettings(overrides = {}) {
     units: "m",
     keepAwake: true, // не гасить экран во время тренировки
     showTenths: true, // показывать десятые доли секунды в отрезках
+    splitGuard: true, // защита от ошибки отсечки: предупреждать о странных отрезках
+    avg25Sec: 30, // ориентир: среднее время на 25 м, с (для этой проверки)
     ...overrides,
   };
 }

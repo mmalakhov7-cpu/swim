@@ -116,6 +116,52 @@ export class Workout {
     return removeLastMarker(this.markers) !== null;
   }
 
+  /**
+   * «Защита от дурака»: анализ ТОЛЬКО ЧТО записанного отрезка (§4.3).
+   * Если время отрезка сильно расходится с ориентиром «среднее 25 м», значит
+   * при нажатии +25/+50, вероятно, ошиблись с дистанцией. Возвращает объект
+   * с вариантами коррекции или null (проверка выключена / данных мало / всё ок).
+   *   kind: 'slow' — слишком долго → проплыл БОЛЬШЕ, чем нажали.
+   *   kind: 'fast' — слишком быстро → проплыл МЕНЬШЕ, чем нажали.
+   */
+  checkLastSplit() {
+    const g = this.settings || {};
+    if (g.splitGuard === false) return null;
+    const avgSec = Number(g.avg25Sec);
+    if (!avgSec || avgSec <= 0) return null;
+
+    const m = this.markers;
+    if (m.length < 2) return null;
+    const last = m[m.length - 1];
+    const prev = m[m.length - 2];
+    const step = last.d - prev.d;   // 25 или 50 — как нажали
+    const segMs = last.t - prev.t;  // фактическое время отрезка
+    if (step <= 0 || segMs <= 0) return null;
+
+    const avgMs = avgSec * 1000;
+    const laps = step / 25;                 // столько «квадратов» по мнению приложения
+    const impliedPerLap = segMs / laps;     // подразумеваемый темп на 25 м
+    const HI = 1.6, LO = 0.6;
+
+    let kind = null;
+    if (impliedPerLap > avgMs * HI) kind = "slow";
+    else if (laps > 1 && impliedPerLap < avgMs * LO) kind = "fast";
+    if (!kind) return null;
+
+    // Варианты дистанции (кратные 25) с темпом на 25 м для каждой — чтобы тренер
+    // сам выбрал по «читаемости» темпа. Наиболее вероятная — на один шаг в сторону.
+    const options = [25, 50, 75, 100].map((d) => ({ dist: d, perLap: segMs / (d / 25) }));
+    const suggested = kind === "slow" ? Math.min(100, step + 25) : Math.max(25, step - 25);
+    return { kind, step, segMs, impliedPerLap, avgMs, options, suggested };
+  }
+
+  /** Исправить дистанцию последнего отрезка, СОХРАНИВ его время (коррекция отсечки). */
+  setLastStep(newDist) {
+    const m = this.markers;
+    if (m.length < 2) return;
+    m[m.length - 1].d = m[m.length - 2].d + newDist;
+  }
+
   _finalizeCurrentTask(now) {
     const p = this.currentPlan;
     const result = makeTaskResult({

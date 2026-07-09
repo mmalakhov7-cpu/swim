@@ -33,6 +33,24 @@ export function renderSettings(root, ctx) {
     ),
 
     h("section.card",
+      switchRow("Проверять подозрительные отсечки", s.splitGuard !== false, (v) => { update({ splitGuard: v }); rerender(); }),
+      s.splitGuard !== false
+        ? h("div.field-inline",
+            h("label.field-label", "Среднее время 25 м"),
+            h("div.avg-input",
+              h("input.field.num", {
+                type: "number", inputmode: "numeric", min: "5", max: "180",
+                value: String(s.avg25Sec || 30),
+                onchange: (e) => { const n = clampSec(e.target.value); e.target.value = String(n); update({ avg25Sec: n }); },
+              }),
+              h("span.unit", "с"),
+            ),
+          )
+        : null,
+      h("p.hint", "Если отрезок оказался заметно длиннее или короче обычного, приложение предложит поправить дистанцию — на случай, если при нажатии перепутали +25 и +50."),
+    ),
+
+    h("section.card",
       h("h2", "Резервная копия"),
       h("p.hint", "localStorage можно потерять — периодически выгружайте данные в файл."),
       h("div.nav-row",
@@ -84,6 +102,12 @@ export function renderSettings(root, ctx) {
     };
     reader.readAsText(file);
   }
+}
+
+function clampSec(v) {
+  const n = parseInt(v, 10);
+  if (!isFinite(n)) return 30;
+  return Math.min(180, Math.max(5, n));
 }
 
 function segBtn(label, active, onclick) {

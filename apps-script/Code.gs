@@ -138,13 +138,22 @@ function dateStr_(v) {
   return String(v);
 }
 
+// Приводим значение из ячейки к типу: true/false, число или строка.
+function coerceVal_(v) {
+  if (v === true || v === false) return v;
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && v.trim() !== '' && !isNaN(v)) return Number(v);
+  return v;
+}
+
 function getAll_() {
-  // settings
-  var settings = { poolLength: 25, units: 'm', keepAwake: true, showTenths: true };
+  // settings — читаем ВСЕ ключи (не только известные), чтобы новые настройки
+  // (напр. splitGuard/avg25Sec) переживали синхронизацию.
+  var settings = { poolLength: 25, units: 'm', keepAwake: true, showTenths: true, splitGuard: true, avg25Sec: 30 };
   rows_('settings').forEach(function (r) {
-    if (r.key === 'poolLength') settings.poolLength = Number(r.value) || 25;
-    else if (r.key === 'keepAwake') settings.keepAwake = bool_(r.value);
-    else if (r.key === 'showTenths') settings.showTenths = bool_(r.value);
+    if (r.key !== '' && r.key != null) settings[String(r.key)] = coerceVal_(r.value);
   });
 
   // templates + tasks
@@ -209,11 +218,16 @@ function getAll_() {
 function saveSettings_(s) {
   var sh = sheet_('settings');
   clearData_(sh);
-  sh.getRange(2, 1, 3, 2).setValues([
-    ['poolLength', s.poolLength != null ? s.poolLength : 25],
-    ['keepAwake', !!s.keepAwake],
-    ['showTenths', !!s.showTenths],
-  ]);
+  // Пишем ВСЕ ключи настроек (по строке на ключ) — так добавление новых настроек
+  // не требует правки бэкенда. Объекты/массивы (если появятся) — как JSON.
+  var keys = Object.keys(s || {});
+  if (!keys.length) return;
+  var rows = keys.map(function (k) {
+    var v = s[k];
+    if (v && typeof v === 'object') v = JSON.stringify(v);
+    return [k, v == null ? '' : v];
+  });
+  sh.getRange(2, 1, rows.length, 2).setValues(rows);
 }
 
 function saveTemplate_(t) {

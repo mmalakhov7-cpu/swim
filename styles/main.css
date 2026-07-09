@@ -708,6 +708,101 @@ select.field {
 .splits-table th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
 .splits-table td { font-variant-numeric: tabular-nums; }
 
+/* Настройки: строка «параметр + компактное поле» */
+.field-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+}
+.avg-input { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.avg-input .field.num { width: 84px; flex: 0 0 84px; text-align: center; font-variant-numeric: tabular-nums; }
+.avg-input .unit { color: var(--muted); font-size: 14px; }
+
+/* ============ Окно коррекции отсечки («защита от дурака») ============ */
+.guard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* выше фиксированной .action-bar (z-index:50) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 8, 12, 0.66);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: guardfade 0.14s ease-out;
+}
+@keyframes guardfade { from { opacity: 0; } to { opacity: 1; } }
+.guard-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: guardpop 0.18s cubic-bezier(.22,.61,.36,1);
+}
+@keyframes guardpop { from { transform: translateY(10px) scale(0.98); opacity: 0; } to { transform: none; opacity: 1; } }
+.guard-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.guard-time {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 6px 0 8px;
+}
+.guard-msg { color: var(--text); font-size: 14px; line-height: 1.45; opacity: 0.92; }
+.guard-q { color: var(--muted); font-size: 13px; margin: 16px 0 10px; }
+.guard-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 10px; }
+.guard-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 62px;
+  padding: 10px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.guard-opt:active { transform: scale(0.97); }
+.guard-opt-dist { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.guard-opt-pace { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.guard-opt.current { opacity: 0.6; }
+.guard-opt.current .guard-opt-dist::after { content: " · сейчас"; font-size: 10px; font-weight: 500; color: var(--muted); }
+.guard-opt.suggest {
+  border-color: var(--accent);
+  background: rgba(88, 199, 230, 0.10);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+  opacity: 1;
+}
+.guard-opt.suggest .guard-opt-dist { color: var(--accent); }
+.guard-keep {
+  width: 100%;
+  margin-top: 14px;
+  min-height: 46px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.guard-keep:active { color: var(--text); }
+
 @media (min-width: 560px) {
   .metric-val { font-size: 34px; }
 }

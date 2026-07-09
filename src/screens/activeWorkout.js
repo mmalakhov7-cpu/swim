@@ -286,18 +286,34 @@ export function renderActiveWorkout(root, ctx) {
     function onTap(step) {
       // Кнопка «погашена» (пауза/просмотр/переплыв) — игнорируем тап.
       if ((step === 25 ? el.tap25 : el.tap50).classList.contains("off")) return;
-      workout.tapSplit(step, Date.now());
+      const now = Date.now();
+      workout.tapSplit(step, now);
       buzz();
-      const s = workout.snapshot(Date.now());
+      // Защита от ошибки отсечки: если отрезок подозрительно длинный/короткий —
+      // показываем окно коррекции и откладываем переход к следующему заданию,
+      // пока тренер не подтвердит дистанцию (она влияет на «доплыто ли задание»).
+      const guard = workout.checkLastSplit();
+      if (guard) {
+        showSplitGuard(guard, () => afterTap(now));
+        tick();
+        return;
+      }
+      afterTap(now);
+    }
+    // Что делать после подтверждённой отсечки (доплыто задание → следующее/финиш).
+    // now — момент нажатия (а не закрытия окна), чтобы время задания не «росло»,
+    // пока открыто окно коррекции.
+    function afterTap(now) {
+      const s = workout.snapshot(now);
       if (s.taskTarget > 0 && s.taskDone >= s.taskTarget) {
         if (s.isLastTask) {
           // Последнее задание доплыто → тренировка завершается (время останавливается).
           buzz(40);
-          finishFlow();
+          finishFlow(now);
           return;
         }
         // Задание доплыто → следующее (авто-пауза = отдых). Смотрим уже новое активное.
-        workout.nextTask(Date.now());
+        workout.nextTask(now);
         viewIndex = workout.currentIndex;
         buzz(30);
         maybeShowRest();
@@ -455,16 +471,62 @@ export function renderActiveWorkout(root, ctx) {
       el.splitTable.append(grid);
     }
     function onFinish() {
-      if (confirm("Завершить тренировку и сохранить?")) finishFlow();
+      if (confirm("Завершить тренировку и сохранить?")) finishFlow(Date.now());
     }
 
-    function finishFlow() {
+    function finishFlow(now = Date.now()) {
       if (finished) return;
       finished = true;
-      const session = workout.finish(Date.now());
+      const session = workout.finish(now);
       addSession(session);
       stop();
       ctx.navigate(`#/session/${session.id}`);
+    }
+
+    // Окно коррекции отсечки («защита от дурака»). Не ставит паузу: секундомер
+    // идёт, спортсмен плывёт дальше — правится только ДИСТАНЦИЯ последнего отрезка
+    // (время сохраняется). done() продолжает обычный поток после закрытия.
+    let guardOpen = false;
+    function showSplitGuard(info, done) {
+      if (guardOpen) return;
+      guardOpen = true;
+      const { kind, step, segMs, avgMs, options, suggested } = info;
+
+      const close = (applyDist) => {
+        const changed = applyDist && applyDist !== step;
+        if (changed) workout.setLastStep(applyDist);
+        overlay.remove();
+        guardOpen = false;
+        buzz(changed ? 30 : 10);
+        tick();
+        done();
+      };
+
+      // Показываем осмысленные варианты: для «долго» — от нажатого и больше,
+      // для «быстро» — от нажатого и меньше. Каждый — с темпом на 25 м.
+      const opts = options.filter((o) => (kind === "slow" ? o.dist >= step : o.dist <= step));
+      const chips = opts.map((o) =>
+        h(`button.guard-opt${o.dist === step ? " current" : ""}${o.dist === suggested ? " suggest" : ""}`,
+          { onclick: () => close(o.dist) },
+          h("span.guard-opt-dist", `${o.dist} м`),
+          h("span.guard-opt-pace", `${formatSplit(o.perLap, { tenths: false })} / 25`),
+        )
+      );
+
+      const overlay = h("div.guard-overlay",
+        h("div.guard-card",
+          h("div.guard-badge", "⚠ проверьте отрезок"),
+          h("div.guard-time", formatSplit(segMs, { tenths })),
+          h("div.guard-msg",
+            kind === "slow"
+              ? `Записано как ${step} м — это долго для ${step} м (обычно 25 м ≈ ${formatSplit(avgMs, { tenths: false })}). Похоже, спортсмен проплыл больше.`
+              : `Записано как ${step} м — это слишком быстро. Похоже, спортсмен проплыл меньше.`),
+          h("div.guard-q", "Сколько проплыто на самом деле?"),
+          h("div.guard-opts", ...chips),
+          h("button.guard-keep", { onclick: () => close(step) }, "Оставить как есть"),
+        ),
+      );
+      screen.appendChild(overlay);
     }
 
     function maybeShowRest() {
