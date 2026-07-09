@@ -19,6 +19,13 @@ export function makeSettings(overrides = {}) {
     showTenths: true, // показывать десятые доли секунды в отрезках
     splitGuard: true, // защита от ошибки отсечки: предупреждать о странных отрезках
     avg25Sec: 30, // ориентир: среднее время на 25 м, с (для этой проверки)
+    // Bluetooth-пульт/педаль (HID-клавиатура): какая клавиша = какое действие.
+    // Web Bluetooth на iOS нет, но BLE-педаль шлёт keydown — его и ловим.
+    remoteEnabled: false,
+    remoteKey25: "Space",       // отсечка +25
+    remoteKey50: "Enter",       // отсечка +50
+    remoteKeyUndo: "Backspace", // отмена
+    remoteKeyPause: "KeyP",     // пауза / продолжить
     ...overrides,
   };
 }

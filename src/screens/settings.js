@@ -51,6 +51,19 @@ export function renderSettings(root, ctx) {
     ),
 
     h("section.card",
+      switchRow("Bluetooth-пульт / педаль", !!s.remoteEnabled, (v) => { update({ remoteEnabled: v }); rerender(); }),
+      s.remoteEnabled
+        ? h("div.remote-keys",
+            remoteRow("Отсечка +25", "remoteKey25", s.remoteKey25),
+            remoteRow("Отсечка +50", "remoteKey50", s.remoteKey50),
+            remoteRow("Отмена", "remoteKeyUndo", s.remoteKeyUndo),
+            remoteRow("Пауза / Продолжить", "remoteKeyPause", s.remoteKeyPause),
+          )
+        : null,
+      h("p.hint", "Педаль или пульт, который шлёт клавиши клавиатуры (не кнопку громкости). Спарь его в настройках Bluetooth iPhone, нажми «Назначить» и кликни кнопку на пульте. Во время тренировки нажатие = отсечка — экран трогать не нужно."),
+    ),
+
+    h("section.card",
       h("h2", "Резервная копия"),
       h("p.hint", "localStorage можно потерять — периодически выгружайте данные в файл."),
       h("div.nav-row",
@@ -102,6 +115,43 @@ export function renderSettings(root, ctx) {
     };
     reader.readAsText(file);
   }
+
+  // Строка «действие — клавиша — Назначить». «Назначить» ждёт следующий keydown
+  // (нажатие на пульте) и запоминает его код.
+  function remoteRow(label, keyName, current) {
+    const btn = h("button.secondary.remote-assign", "Назначить");
+    btn.onclick = () => {
+      btn.textContent = "Нажми кнопку…";
+      btn.classList.add("listening");
+      const onKey = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.removeEventListener("keydown", onKey, true);
+        update({ [keyName]: e.code || e.key });
+        rerender();
+      };
+      document.addEventListener("keydown", onKey, true);
+    };
+    return h("div.remote-row",
+      h("span.remote-label", label),
+      h("span.remote-key", prettyKey(current)),
+      btn,
+    );
+  }
+}
+
+// Человеко-читаемое имя клавиши по её коду (event.code).
+function prettyKey(code) {
+  if (!code) return "—";
+  const map = {
+    Space: "Пробел", Enter: "Enter", NumpadEnter: "Enter", Backspace: "⌫",
+    ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→",
+    PageUp: "PgUp", PageDown: "PgDn", Tab: "Tab", Escape: "Esc",
+  };
+  if (map[code]) return map[code];
+  if (code.startsWith("Key")) return code.slice(3);    // KeyP → P
+  if (code.startsWith("Digit")) return code.slice(5);  // Digit1 → 1
+  return code;
 }
 
 function clampSec(v) {

@@ -817,6 +817,26 @@ select.field {
 .avg-input .field.num { width: 84px; flex: 0 0 84px; text-align: center; font-variant-numeric: tabular-nums; }
 .avg-input .unit { color: var(--muted); font-size: 14px; }
 
+/* Bluetooth-пульт: строки «действие — клавиша — Назначить» */
+.remote-keys { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+.remote-row { display: flex; align-items: center; gap: 10px; }
+.remote-label { flex: 1 1 auto; min-width: 0; font-size: 14px; }
+.remote-key {
+  flex: 0 0 auto;
+  min-width: 54px;
+  text-align: center;
+  padding: 5px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--bg-2);
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 14px;
+}
+.remote-assign { flex: 0 0 auto; min-height: 40px; padding: 6px 14px; font-size: 13px; }
+.remote-assign.listening { color: var(--accent); border-color: var(--accent); }
+
 /* ============ Окно коррекции отсечки («защита от дурака») ============ */
 .guard-overlay {
   position: fixed;

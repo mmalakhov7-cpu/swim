@@ -320,6 +320,22 @@ export function renderActiveWorkout(root, ctx) {
     const interval = setInterval(tick, 100);
     tick();
 
+    // Bluetooth-пульт/педаль: клавиша от HID-устройства = действие. Web Bluetooth
+    // на iOS нет, но BLE-педаль/пульт шлёт keydown, который мы и ловим.
+    function onRemoteKey(e) {
+      if (!settings.remoteEnabled || e.repeat || guardOpen) return;
+      const code = e.code || e.key;
+      if (!code) return;
+      let done = true;
+      if (code === settings.remoteKey25) onTap(25);
+      else if (code === settings.remoteKey50) onTap(50);
+      else if (code === settings.remoteKeyUndo) onUndo();
+      else if (code === settings.remoteKeyPause) onPause();
+      else done = false;
+      if (done) e.preventDefault();
+    }
+    if (settings.remoteEnabled) document.addEventListener("keydown", onRemoteKey);
+
     function onTap(step) {
       // Кнопка «погашена» (пауза/просмотр/переплыв) — игнорируем тап.
       if ((step === 25 ? el.tap25 : el.tap50).classList.contains("off")) return;
@@ -618,6 +634,7 @@ export function renderActiveWorkout(root, ctx) {
       clearInterval(interval);
       wake.disable();
       document.body.classList.remove("active-lock");
+      document.removeEventListener("keydown", onRemoteKey);
     }
 
     ctx.onCleanup(() => stop());
