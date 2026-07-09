@@ -303,6 +303,10 @@ export class Workout {
       split100: timers[100],
       // мета
       canUndo: this.markers.length > 1,
+      // шаг последнего отрезка (25/50) — для подсветки последней нажатой кнопки
+      lastStepMeters: this.markers.length >= 2
+        ? this.markers[this.markers.length - 1].d - this.markers[this.markers.length - 2].d
+        : 0,
       isLastTask: this.isLastTask,
       taskIndex: this.currentIndex,
       taskCount: this.plan.length,

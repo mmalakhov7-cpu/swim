@@ -310,6 +310,11 @@ export function renderActiveWorkout(root, ctx) {
       el.undoBtn.classList.toggle("off", browsing || !s.canUndo);
       el.tap25.classList.toggle("off", browsing || s.paused || (targeted && rem <= 0));
       el.tap50.classList.toggle("off", browsing || s.paused || (targeted && rem < 50));
+
+      // Подсветка последней нажатой отсечки (по активной тренировке) — видно,
+      // что записали последним, 25 или 50 → меньше ошибок в сплитах.
+      el.tap25.classList.toggle("last", s.lastStepMeters === 25);
+      el.tap50.classList.toggle("last", s.lastStepMeters === 50);
     }
 
     const interval = setInterval(tick, 100);
@@ -455,19 +460,25 @@ export function renderActiveWorkout(root, ctx) {
       sdSig = sig;
       clear(el.splitTable);
 
+      // Закреплённая шапка окна: заголовок + строка колонок «# 25 50 100».
+      // Обе строки остаются на месте при прокрутке (не уходят в скролл).
       el.splitTable.append(
-        h("div.st-head",
-          h("span.st-title", "Разбивка задания"),
-          h("span.st-right",
-            h("span.st-sub",
-              target ? `${fmtMeters(done)} / ${fmtMeters(target)} м` : `${fmtMeters(done)} м`),
-            h("button.st-expand", {
-              onclick: toggleExpand,
-              html: expanded ? COLLAPSE_SVG : EXPAND_SVG,
-              title: expanded ? "Свернуть" : "Развернуть окно сплитов",
-              "aria-label": expanded ? "Свернуть" : "Развернуть окно сплитов",
-            }),
+        h("div.st-sticky",
+          h("div.st-head",
+            h("span.st-title", "Разбивка задания"),
+            h("span.st-right",
+              h("span.st-sub",
+                target ? `${fmtMeters(done)} / ${fmtMeters(target)} м` : `${fmtMeters(done)} м`),
+              h("button.st-expand", {
+                onclick: toggleExpand,
+                html: expanded ? COLLAPSE_SVG : EXPAND_SVG,
+                title: expanded ? "Свернуть" : "Развернуть окно сплитов",
+                "aria-label": expanded ? "Свернуть" : "Развернуть окно сплитов",
+              }),
+            ),
           ),
+          h("div.st-row.st-hd",
+            h("span.st-c0", "#"), h("span", "25 м"), h("span", "50 м"), h("span", "100 м")),
         )
       );
 
@@ -491,10 +502,6 @@ export function renderActiveWorkout(root, ctx) {
       const sum = (a, b) => { let s = 0; for (let i = a; i <= b; i++) { if (i > doneLaps) return null; s += q[i - 1]; } return s; };
 
       const grid = h("div.st-grid");
-      grid.append(
-        h("div.st-row.st-hd",
-          h("span.st-c0", "#"), h("span", "25 м"), h("span", "50 м"), h("span", "100 м")),
-      );
       for (let i = 1; i <= nRows; i++) {
         const swum = i <= doneLaps;
         // 25 м

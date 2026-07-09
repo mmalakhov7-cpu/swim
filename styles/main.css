@@ -349,18 +349,23 @@ button { font-family: inherit; touch-action: manipulation; }
 }
 .split-scroll .split-table { background: transparent; border: none; box-shadow: none; border-radius: 0; padding: 0; }
 /* Заголовок таблицы («Разбивка … 175 / 400 м» + кнопка развернуть) закреплён. */
-.split-scroll .st-head {
+/* Закреплённая шапка окна — ОБЕ строки (заголовок + «# 25 50 100») остаются
+   на месте при прокрутке, данные скроллятся под ними. */
+.split-scroll .st-sticky {
   position: sticky;
   top: 0;
-  z-index: 1;
-  margin: 0;
-  padding: 11px 14px 7px;
+  z-index: 2;
   background: var(--card);
   border-bottom: 1px solid var(--line);
+}
+.split-scroll .st-head {
+  margin: 0;
+  padding: 11px 14px 6px;
   align-items: center;
 }
+.split-scroll .st-sticky .st-hd { padding: 2px 16px 8px; border-bottom: none; }
 .split-scroll .st-grid { padding: 0 14px 6px; }
-.split-scroll .st-row { padding: 7px 2px; }
+.split-scroll .st-grid .st-row { padding: 7px 2px; }
 .split-scroll .st-empty { padding: 12px 14px; }
 
 .st-right { display: flex; align-items: center; gap: 10px; }
@@ -547,11 +552,16 @@ button { font-family: inherit; touch-action: manipulation; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(230, 185, 104, 0.14);
-  color: var(--amber);
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  color: var(--text);
   font-weight: 600;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.ctrl.pause.resumed { color: var(--green); background: rgba(99, 214, 164, 0.16); }
+.ctrl.pause:active { color: var(--amber); border-color: var(--amber); background: rgba(230, 185, 104, 0.16); }
+/* На паузе «Продолжить» горит зелёным — явный сигнал, что таймер стоит. */
+.ctrl.pause.resumed { color: var(--green); border-color: var(--green); background: rgba(99, 214, 164, 0.14); }
+.ctrl.pause.resumed:active { background: rgba(99, 214, 164, 0.22); }
 .ctrl-ic { display: inline-flex; align-items: center; }
 .ctrl-ic svg { display: block; }
 /* Индикация паузы: приглушаем только кнопки-отсечки и таблицу (отмена остаётся). */
@@ -565,26 +575,28 @@ button { font-family: inherit; touch-action: manipulation; }
 .tap {
   flex: 1;
   min-height: 58px;
-  border: none;
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  color: var(--text);
   font-size: 20px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--ink);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  transition: transform 0.08s ease, filter 0.15s ease;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
 }
-/* Мягкий «подъём» + тонкий блик сверху вместо неонового глоу (в тон приложению). */
-.tap { box-shadow: 0 5px 14px -7px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
-.tap:active { transform: scale(0.98); filter: brightness(1.05); }
-/* Обе — из палитры: +25 циан (как основная кнопка приложения), +50 мятно-зелёный. */
-.tap25 { background: linear-gradient(135deg, #46b6d6, #57d0cd); }
-.tap50 { background: linear-gradient(135deg, #43bf96, #60d09e); }
-.tap.off { opacity: 0.28; filter: grayscale(0.4); box-shadow: none; cursor: default; }
-.tap.off:active { transform: none; filter: grayscale(0.4); }
+.tap:active { transform: scale(0.98); }
+/* Единый стиль: нейтральная обводка → «загорается» цветом при нажатии и остаётся
+   подсвеченной у ПОСЛЕДНЕЙ нажатой (.last) — сразу видно, 25 или 50 записал последним. */
+.tap25.last { color: var(--accent); border-color: var(--accent); background: rgba(88, 199, 230, 0.12); }
+.tap50.last { color: var(--green);  border-color: var(--green);  background: rgba(99, 214, 164, 0.12); }
+.tap25:active { color: var(--accent); border-color: var(--accent); background: rgba(88, 199, 230, 0.22); }
+.tap50:active { color: var(--green);  border-color: var(--green);  background: rgba(99, 214, 164, 0.22); }
+.tap.off { opacity: 0.3; cursor: default; }
+.tap.off:active { transform: none; }
 
 /* Компактная «Отмена» (↶) в строке с +25/+50 */
 .undo-tap {
@@ -601,7 +613,7 @@ button { font-family: inherit; touch-action: manipulation; }
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 .undo-tap svg { display: block; }
-.undo-tap:active { background: var(--card-2); color: var(--text); }
+.undo-tap:active { color: var(--amber); border-color: var(--amber); background: rgba(230, 185, 104, 0.14); }
 .undo-tap.off { opacity: 0.3; cursor: default; }
 .undo-tap.off:active { background: var(--bg-2); color: var(--muted); }
 
