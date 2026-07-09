@@ -552,16 +552,16 @@ button { font-family: inherit; touch-action: manipulation; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid var(--line-2);
-  background: var(--bg-2);
-  color: var(--text);
+  border: 1px solid var(--amber);
+  background: rgba(230, 185, 104, 0.14);
+  color: var(--amber);
   font-weight: 600;
   transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.ctrl.pause:active { color: var(--amber); border-color: var(--amber); background: rgba(230, 185, 104, 0.16); }
+.ctrl.pause:active { background: rgba(230, 185, 104, 0.24); }
 /* На паузе «Продолжить» горит зелёным — явный сигнал, что таймер стоит. */
 .ctrl.pause.resumed { color: var(--green); border-color: var(--green); background: rgba(99, 214, 164, 0.14); }
-.ctrl.pause.resumed:active { background: rgba(99, 214, 164, 0.22); }
+.ctrl.pause.resumed:active { background: rgba(99, 214, 164, 0.24); }
 .ctrl-ic { display: inline-flex; align-items: center; }
 .ctrl-ic svg { display: block; }
 /* Индикация паузы: приглушаем только кнопки-отсечки и таблицу (отмена остаётся). */
@@ -591,10 +591,8 @@ button { font-family: inherit; touch-action: manipulation; }
 .tap:active { transform: scale(0.98); }
 /* Единый стиль: нейтральная обводка → «загорается» цветом при нажатии и остаётся
    подсвеченной у ПОСЛЕДНЕЙ нажатой (.last) — сразу видно, 25 или 50 записал последним. */
-.tap25.last { color: var(--accent); border-color: var(--accent); background: rgba(88, 199, 230, 0.12); }
-.tap50.last { color: var(--green);  border-color: var(--green);  background: rgba(99, 214, 164, 0.12); }
-.tap25:active { color: var(--accent); border-color: var(--accent); background: rgba(88, 199, 230, 0.22); }
-.tap50:active { color: var(--green);  border-color: var(--green);  background: rgba(99, 214, 164, 0.22); }
+.tap25.last, .tap50.last { color: var(--green); border-color: var(--green); background: rgba(99, 214, 164, 0.12); }
+.tap25:active, .tap50:active { color: var(--green); border-color: var(--green); background: rgba(99, 214, 164, 0.22); }
 .tap.off { opacity: 0.3; cursor: default; }
 .tap.off:active { transform: none; }
 
