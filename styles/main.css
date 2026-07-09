@@ -577,30 +577,33 @@ button { font-family: inherit; touch-action: manipulation; }
   touch-action: manipulation;
   transition: transform 0.08s ease, filter 0.15s ease;
 }
-.tap:active { transform: scale(0.98); filter: brightness(1.04); }
-.tap25 { background: linear-gradient(135deg, #4fc3e0, #5fe3cf); box-shadow: 0 6px 20px rgba(79, 195, 224, 0.20); }
-.tap50 { background: linear-gradient(135deg, #8ea2f0, #b199f2); box-shadow: 0 6px 20px rgba(142, 162, 240, 0.20); }
-.tap.off { opacity: 0.25; filter: grayscale(0.5); box-shadow: none; cursor: default; }
-.tap.off:active { transform: none; filter: grayscale(0.5); }
+/* Мягкий «подъём» + тонкий блик сверху вместо неонового глоу (в тон приложению). */
+.tap { box-shadow: 0 5px 14px -7px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+.tap:active { transform: scale(0.98); filter: brightness(1.05); }
+/* Обе — из палитры: +25 циан (как основная кнопка приложения), +50 мятно-зелёный. */
+.tap25 { background: linear-gradient(135deg, #46b6d6, #57d0cd); }
+.tap50 { background: linear-gradient(135deg, #43bf96, #60d09e); }
+.tap.off { opacity: 0.28; filter: grayscale(0.4); box-shadow: none; cursor: default; }
+.tap.off:active { transform: none; filter: grayscale(0.4); }
 
 /* Компактная «Отмена» (↶) в строке с +25/+50 */
 .undo-tap {
   flex: 0 0 auto;
   width: 60px;
   min-height: 58px;
-  border: none;
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
-  background: rgba(230, 185, 104, 0.12);
-  color: var(--amber);
+  background: var(--bg-2);
+  color: var(--muted);
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 .undo-tap svg { display: block; }
-.undo-tap:active { background: rgba(230, 185, 104, 0.20); }
+.undo-tap:active { background: var(--card-2); color: var(--text); }
 .undo-tap.off { opacity: 0.3; cursor: default; }
-.undo-tap.off:active { background: rgba(230, 185, 104, 0.12); }
+.undo-tap.off:active { background: var(--bg-2); color: var(--muted); }
 
 .ctrl-row { display: flex; gap: 12px; }
 .ctrl {
