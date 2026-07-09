@@ -109,8 +109,9 @@ if ("serviceWorker" in navigator) {
     location.reload();
   });
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").then((reg) => {
-      // Периодически проверять обновление SW.
+    // updateViaCache:"none" — сам скрипт SW тоже не берём из HTTP-кэша, чтобы
+    // браузер сразу видел новую версию после деплоя.
+    navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" }).then((reg) => {
       reg.update().catch(() => {});
     }).catch(() => {});
   });

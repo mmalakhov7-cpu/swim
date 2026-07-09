@@ -6,7 +6,7 @@
 //   • офлайн — отдаём последнюю закэшированную версию.
 // Так офлайн-работа сохраняется, но обновления не «залипают» в кэше.
 
-const CACHE = "swim-v35";
+const CACHE = "swim-v36";
 
 const ASSETS = [
   "./",
@@ -36,8 +36,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  // Прекэш — С ОБХОДОМ HTTP-кэша браузера (cache:"reload"), иначе в оффлайн-копию
+  // могут попасть устаревшие файлы (GitHub Pages отдаёт max-age=600). По одному,
+  // чтобы один 404 не сорвал всю установку.
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE).then((c) =>
+      Promise.all(ASSETS.map((u) => c.add(new Request(u, { cache: "reload" })).catch(() => {})))
+    ).then(() => self.skipWaiting())
   );
 });
 
@@ -56,7 +61,9 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return; // только свои ресурсы
 
   event.respondWith(
-    fetch(request)
+    // cache:"reload" — берём из СЕТИ в обход HTTP-кэша браузера (max-age=600 от
+    // GitHub Pages), иначе после деплоя обновления «залипают» до 10 минут.
+    fetch(request, { cache: "reload" })
       .then((resp) => {
         // Успех из сети — обновляем кэш и отдаём свежее.
         if (resp && resp.ok) {
