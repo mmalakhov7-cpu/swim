@@ -4,7 +4,8 @@
 //   2) «Заплыв» — живые секундомеры, 5 таймеров, +25/+50, Undo, ←/→, финиш.
 
 import { Workout } from "../workout.js";
-import { addSession } from "../storage.js";
+import { addSession, saveTemplate } from "../storage.js";
+import { makeWorkoutTemplate, makeTaskTemplate } from "../models.js";
 import { formatDuration, formatSplit } from "../timer.js";
 import { h, clear, fmtDistPools, fmtMeters } from "../ui.js";
 import { createWakeLock } from "../wakeLock.js";
@@ -572,7 +573,49 @@ export function renderActiveWorkout(root, ctx) {
       const session = workout.finish(now);
       addSession(session);
       stop();
-      ctx.navigate(`#/session/${session.id}`);
+      const goSession = () => ctx.navigate(`#/session/${session.id}`);
+      // План правили на ходу → предложить сохранить изменённый план в шаблоны.
+      if (workout.planEdited && workout.plan.some((p) => p.targetDistance > 0)) {
+        showSaveTemplate(goSession);
+      } else {
+        goSession();
+      }
+    }
+
+    // Модалка после финиша: обновить исходный шаблон изменённым планом, сохранить
+    // как новый, или ничего. done() уводит на карточку тренировки.
+    function showSaveTemplate(done) {
+      const src = pending.template; // исходный шаблон (или null для свободной)
+      const total = workout.plan.reduce((a, p) => a + (p.targetDistance || 0), 0);
+      const planTasks = () => workout.plan.map((p) => makeTaskTemplate({
+        name: p.name, targetDistance: p.targetDistance,
+        stroke: p.stroke || null, restAfterSec: p.restAfterSec || null, note: p.note || null,
+      }));
+      const finishUp = () => { overlay.remove(); done(); };
+
+      const opts = [];
+      if (src) {
+        opts.push(h("button.tpl-opt.primary", {
+          onclick: () => { saveTemplate({ ...src, tasks: planTasks() }); finishUp(); },
+        }, `Обновить «${src.name}»`));
+        opts.push(h("button.tpl-opt", {
+          onclick: () => { saveTemplate(makeWorkoutTemplate({ name: `${src.name} · вариант`, tasks: planTasks() })); finishUp(); },
+        }, "Сохранить как новый"));
+      } else {
+        opts.push(h("button.tpl-opt.primary", {
+          onclick: () => { saveTemplate(makeWorkoutTemplate({ name: "Своя тренировка", tasks: planTasks() })); finishUp(); },
+        }, "Сохранить как шаблон"));
+      }
+      opts.push(h("button.tpl-skip", { onclick: finishUp }, "Не сохранять"));
+
+      const overlay = h("div.guard-overlay",
+        h("div.guard-card",
+          h("div.guard-badge", "✎ план менялся"),
+          h("div.guard-msg", `Сохранить изменённый план (${fmtMeters(total)} м) в шаблоны?`),
+          h("div.tpl-opts", ...opts),
+        ),
+      );
+      screen.appendChild(overlay);
     }
 
     // Окно коррекции отсечки («защита от дурака»). Не ставит паузу: секундомер

@@ -50,6 +50,7 @@ export class Workout {
 
     this.completed = [];
     this.currentIndex = 0;
+    this.planEdited = false; // план правили на ходу → предложить сохранить в шаблон
     this._beginTask(now);
   }
 
@@ -176,6 +177,7 @@ export class Workout {
       const done = currentDistance(this.markers);
       t = Math.max(t, Math.ceil(done / 25) * 25); // не меньше уже проплытого
     }
+    if (p.targetDistance !== t) this.planEdited = true;
     p.targetDistance = t;
     return true;
   }
@@ -184,6 +186,7 @@ export class Workout {
   removeTask(index) {
     if (index <= this.currentIndex || index >= this.plan.length) return false;
     this.plan.splice(index, 1);
+    this.planEdited = true;
     return true;
   }
 
@@ -195,10 +198,12 @@ export class Workout {
       targetDistance: Math.max(25, Math.round(targetDistance / 25) * 25),
       restAfterSec: null, stroke: null, note: null,
     });
+    this.planEdited = true;
   }
 
   /** Обрезать план: убрать все задания после текущего (завершаем на нём). */
   truncateAfterCurrent() {
+    if (this.plan.length > this.currentIndex + 1) this.planEdited = true;
     this.plan.splice(this.currentIndex + 1);
   }
 
