@@ -48,6 +48,12 @@ const COLLAPSE_SVG =
   'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M4 9h5V4"/><path d="M20 15h-5v5"/><path d="M9 9L3 3"/><path d="M15 15l6 6"/></svg>';
 
+// Карандаш — «изменить план тренировки на ходу».
+const PENCIL_SVG =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M14.5 5.5l4 4M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 0l.5.5a2.1 2.1 0 0 1 0 3L8.5 19 4 20z"/></svg>';
+
 export function renderActiveWorkout(root, ctx) {
   const pending = ctx.state.pendingStart;
   if (!pending) {
@@ -145,6 +151,10 @@ export function renderActiveWorkout(root, ctx) {
       onclick: toggleDesc, html: INFO_SVG,
       title: "Описание задания", "aria-label": "Описание задания",
     });
+    el.planBtn = h("button.desc-btn.plan-btn", {
+      onclick: showPlanEditor, html: PENCIL_SVG,
+      title: "Изменить план", "aria-label": "Изменить план",
+    });
     el.descBox = h("div.desc-box hidden");
     el.taskMetricLabel = h("div.metric-label", "Осталось по заданию");
     el.taskRemain = h("div.metric-val");
@@ -180,7 +190,7 @@ export function renderActiveWorkout(root, ctx) {
           (el.taskSlide = h("div.task-slide",
             h("div.task-head-row",
               h("div.task-head-left", el.taskName, el.taskStatus),
-              el.descBtn),
+              h("div.task-head-btns", el.planBtn, el.descBtn)),
             el.descBox,
             h("div.hero-row",
               h("div.hero-metric",
@@ -323,7 +333,7 @@ export function renderActiveWorkout(root, ctx) {
     // Bluetooth-пульт/педаль: клавиша от HID-устройства = действие. Web Bluetooth
     // на iOS нет, но BLE-педаль/пульт шлёт keydown, который мы и ловим.
     function onRemoteKey(e) {
-      if (!settings.remoteEnabled || e.repeat || guardOpen) return;
+      if (!settings.remoteEnabled || e.repeat || guardOpen || planOpen) return;
       const code = e.code || e.key;
       if (!code) return;
       let done = true;
@@ -608,6 +618,74 @@ export function renderActiveWorkout(root, ctx) {
           h("button.guard-keep", { onclick: () => close(step) }, "Оставить как есть"),
         ),
       );
+      screen.appendChild(overlay);
+    }
+
+    // Редактор плана НА ХОДУ: план менялся по факту (планировали 2.5, поплыли 2,
+    // сделали 2.2). Прошедшие задания заблокированы, текущее показываем, предстоящие
+    // можно менять/удалять/добавлять. Часы не останавливаем.
+    let planOpen = false;
+    function showPlanEditor() {
+      if (planOpen) return;
+      planOpen = true;
+      const list = h("div.plan-list");
+      const totalEl = h("span.plan-total");
+
+      const refresh = () => { viewIndex = Math.min(viewIndex, workout.plan.length - 1); render(); tick(); };
+      const step = (i, d) => { const p = workout.plan[i]; workout.setTaskTarget(i, (p.targetDistance || 0) + d); refresh(); buzz(8); };
+      const del = (i) => { workout.removeTask(i); refresh(); buzz(12); };
+      const add = () => { workout.addTask({ targetDistance: 100 }); render(); tick(); buzz(12); };
+      const trunc = () => { workout.truncateAfterCurrent(); refresh(); buzz(15); };
+      const close = () => { overlay.remove(); planOpen = false; tick(); };
+
+      function render() {
+        clear(list);
+        const cur = workout.currentIndex;
+        workout.plan.forEach((p, i) => {
+          const isDone = i < cur, isCur = i === cur;
+          const target = p.targetDistance || 0;
+          let right;
+          if (isDone) {
+            const swum = (workout.completed[i] && workout.completed[i].swumDistance) || 0;
+            right = h("span.plan-val", `${fmtMeters(swum)} м`);
+          } else if (isCur) {
+            right = h("span.plan-val", `${fmtMeters(target)} м`);
+          } else {
+            right = h("div.plan-ctrls",
+              h("div.plan-stepper",
+                h("button.plan-step", { onclick: () => step(i, -50) }, "−"),
+                h("span.plan-target", `${fmtMeters(target)}`),
+                h("button.plan-step", { onclick: () => step(i, +50) }, "+"),
+              ),
+              h("button.plan-del", { onclick: () => del(i), title: "Удалить", "aria-label": "Удалить" }, "✕"),
+            );
+          }
+          list.append(
+            h(`div.plan-edit-row${isCur ? " cur" : ""}${isDone ? " done" : ""}`,
+              h("span.plan-num", isDone ? "✓" : `${i + 1}`),
+              h("div.plan-name-wrap",
+                h("div.plan-name-t", p.name || "Задание"),
+                isCur ? h("div.plan-badge", "сейчас") : (isDone ? h("div.plan-badge", "проплыто") : null),
+              ),
+              right,
+            )
+          );
+        });
+        totalEl.textContent = `${fmtMeters(workout.plan.reduce((a, p) => a + (p.targetDistance || 0), 0))} м`;
+      }
+
+      const overlay = h("div.plan-overlay",
+        h("div.plan-card",
+          h("div.plan-head", h("span.plan-title", "План тренировки"), totalEl),
+          list,
+          h("div.plan-actions",
+            h("button.secondary.plan-add", { onclick: add }, "+ Задание 100"),
+            h("button.secondary.plan-trunc", { onclick: trunc }, "Убрать всё дальше"),
+          ),
+          h("button.plan-done", { onclick: close }, "Готово"),
+        ),
+      );
+      render();
       screen.appendChild(overlay);
     }
 

@@ -162,6 +162,46 @@ export class Workout {
     m[m.length - 1].d = m[m.length - 2].d + newDist;
   }
 
+  // --- Редактирование плана НА ХОДУ (§ план менялся по факту) ---------------
+  // Прошедшие задания трогать нельзя (уже проплыты). Текущее — можно менять цель
+  // (не ниже уже проплытого). Предстоящие — цель/удаление/добавление.
+
+  /** Изменить цель задания (текущего или предстоящего), кратно 25 м. */
+  setTaskTarget(index, meters) {
+    if (index < this.currentIndex) return false; // прошедшее — заблокировано
+    const p = this.plan[index];
+    if (!p) return false;
+    let t = Math.max(0, Math.round(meters / 25) * 25);
+    if (index === this.currentIndex) {
+      const done = currentDistance(this.markers);
+      t = Math.max(t, Math.ceil(done / 25) * 25); // не меньше уже проплытого
+    }
+    p.targetDistance = t;
+    return true;
+  }
+
+  /** Удалить ПРЕДСТОЯЩЕЕ задание (текущее/прошедшие — нельзя). */
+  removeTask(index) {
+    if (index <= this.currentIndex || index >= this.plan.length) return false;
+    this.plan.splice(index, 1);
+    return true;
+  }
+
+  /** Добавить задание в конец плана. */
+  addTask({ name = "Доп. задание", targetDistance = 100 } = {}) {
+    this.plan.push({
+      taskTemplateId: null,
+      name,
+      targetDistance: Math.max(25, Math.round(targetDistance / 25) * 25),
+      restAfterSec: null, stroke: null, note: null,
+    });
+  }
+
+  /** Обрезать план: убрать все задания после текущего (завершаем на нём). */
+  truncateAfterCurrent() {
+    this.plan.splice(this.currentIndex + 1);
+  }
+
   _finalizeCurrentTask(now) {
     const p = this.currentPlan;
     const result = makeTaskResult({
